@@ -52,7 +52,7 @@ def numeric_bounds_from_validators(
 
 def integers_for_field(min_value, max_value):
     def inner(field):
-        return st.integers(*numeric_bounds_from_validators(field, min_value, max_value))
+        pass
 
     return inner
 
@@ -112,8 +112,7 @@ _ipv6_strings = st.one_of(
 
 def register_for(field_type):
     def inner(func):
-        _global_field_lookup[field_type] = func
-        return func
+        pass
 
     return inner
 
@@ -121,72 +120,39 @@ def register_for(field_type):
 @register_for(dm.DateTimeField)
 @register_for(df.DateTimeField)
 def _for_datetime(field):
-    if getattr(django.conf.settings, "USE_TZ", False):
-        # avoid https://code.djangoproject.com/ticket/35683
-        return st.datetimes(
-            min_value=datetime.min + timedelta(days=1),
-            max_value=datetime.max - timedelta(days=1),
-            timezones=timezones(),
-        )
-    return st.datetimes()
+    pass
 
 
 def using_sqlite():
-    try:
-        return (
-            getattr(django.conf.settings, "DATABASES", {})
-            .get("default", {})
-            .get("ENGINE", "")
-            .endswith(".sqlite3")
-        )
-    except django.core.exceptions.ImproperlyConfigured:
-        return None
+    pass
 
 
 @register_for(dm.TimeField)
 def _for_model_time(field):
     # SQLITE supports TZ-aware datetimes, but not TZ-aware times.
-    if getattr(django.conf.settings, "USE_TZ", False) and not using_sqlite():
-        return st.times(timezones=timezones())
-    return st.times()
+    pass
 
 
 @register_for(df.TimeField)
 def _for_form_time(field):
-    if getattr(django.conf.settings, "USE_TZ", False):
-        return st.times(timezones=timezones())
-    return st.times()
+    pass
 
 
 @register_for(dm.DurationField)
 def _for_duration(field):
     # SQLite stores timedeltas as six bytes of microseconds
-    if using_sqlite():
-        delta = timedelta(microseconds=2**47 - 1)
-        return st.timedeltas(-delta, delta)
-    return st.timedeltas()
+    pass
 
 
 @register_for(dm.SlugField)
 @register_for(df.SlugField)
 def _for_slug(field):
-    min_size = 1
-    if getattr(field, "blank", False) or not getattr(field, "required", True):
-        min_size = 0
-    return st.text(
-        alphabet=string.ascii_letters + string.digits,
-        min_size=min_size,
-        max_size=field.max_length,
-    )
+    pass
 
 
 @register_for(dm.GenericIPAddressField)
 def _for_model_ip(field):
-    return {
-        "ipv4": st.ip_addresses(v=4).map(str),
-        "ipv6": _ipv6_strings,
-        "both": st.ip_addresses(v=4).map(str) | _ipv6_strings,
-    }[field.protocol.lower()]
+    pass
 
 
 @register_for(df.GenericIPAddressField)
@@ -194,44 +160,22 @@ def _for_form_ip(field):
     # the IP address form fields have no direct indication of which type
     #  of address they want, so direct comparison with the validator
     #  function has to be used instead. Sorry for the potato logic here
-    if validate_ipv46_address in field.default_validators:
-        return st.ip_addresses(v=4).map(str) | _ipv6_strings
-    if validate_ipv4_address in field.default_validators:
-        return st.ip_addresses(v=4).map(str)
-    if validate_ipv6_address in field.default_validators:
-        return _ipv6_strings
-    raise ResolutionFailed(f"No IP version validator on {field=}")
+    pass
 
 
 @register_for(dm.DecimalField)
 @register_for(df.DecimalField)
 def _for_decimal(field):
-    min_value, max_value = numeric_bounds_from_validators(field)
-    bound = Decimal(10**field.max_digits - 1) / (10**field.decimal_places)
-    return st.decimals(
-        min_value=max(min_value, -bound),
-        max_value=min(max_value, bound),
-        places=field.decimal_places,
-    )
+    pass
 
 
 def length_bounds_from_validators(field):
-    min_size = 1
-    max_size = field.max_length
-    for v in field.validators:
-        if isinstance(v, django.core.validators.MinLengthValidator):
-            min_size = max(min_size, v.limit_value)
-        elif isinstance(v, django.core.validators.MaxLengthValidator):
-            max_size = min(max_size or v.limit_value, v.limit_value)
-    return min_size, max_size
+    pass
 
 
 @register_for(dm.BinaryField)
 def _for_binary(field):
-    min_size, max_size = length_bounds_from_validators(field)
-    if getattr(field, "blank", False) or not getattr(field, "required", True):
-        return st.just(b"") | st.binary(min_size=min_size, max_size=max_size)
-    return st.binary(min_size=min_size, max_size=max_size)
+    pass
 
 
 @register_for(dm.CharField)
@@ -243,29 +187,7 @@ def _for_text(field):
     # validators as well as the field type.  This is a minimal proof of
     # concept, but we intend to leverage the idea much more heavily soon.
     # See https://github.com/HypothesisWorks/hypothesis-python/issues/1116
-    regexes = [
-        re.compile(v.regex, v.flags) if isinstance(v.regex, str) else v.regex
-        for v in field.validators
-        if isinstance(v, django.core.validators.RegexValidator) and not v.inverse_match
-    ]
-    if regexes:
-        # This strategy generates according to one of the regexes, and
-        # filters using the others.  It can therefore learn to generate
-        # from the most restrictive and filter with permissive patterns.
-        # Not maximally efficient, but it makes pathological cases rarer.
-        # If you want a challenge: extend https://qntm.org/greenery to
-        # compute intersections of the full Python regex language.
-        return st.one_of(*(st.from_regex(r) for r in regexes))
-    # If there are no (usable) regexes, we use a standard text strategy.
-    min_size, max_size = length_bounds_from_validators(field)
-    strategy = st.text(
-        alphabet=st.characters(exclude_characters="\x00", exclude_categories=("Cs",)),
-        min_size=min_size,
-        max_size=max_size,
-    ).filter(lambda s: min_size <= len(s.strip()))
-    if getattr(field, "blank", False) or not getattr(field, "required", True):
-        return st.just("") | strategy
-    return strategy
+    pass
 
 
 if "django.contrib.auth" in settings.INSTALLED_APPS:
@@ -276,58 +198,21 @@ if "django.contrib.auth" in settings.INSTALLED_APPS:
 
 @register_for(df.BooleanField)
 def _for_form_boolean(field):
-    if field.required:
-        return st.just(True)
-    return st.booleans()
+    pass
 
 
 def _model_choice_strategy(field):
-    def _strategy():
-        if field.choices is None:
-            # The field was instantiated with queryset=None, and not
-            # subsequently updated.
-            raise InvalidArgument(
-                "Cannot create strategy for ModelChoicesField with no choices"
-            )
-        elif hasattr(field, "_choices"):
-            # The choices property was set manually.
-            choices = field._choices
-        else:
-            # choices is not None, and was not set manually, so we
-            # must have a QuerySet.
-            choices = field.queryset
-
-        if not choices.ordered:
-            raise InvalidArgument(
-                f"Cannot create strategy for {field.__class__.__name__} with a choices "
-                "attribute derived from a QuerySet without an explicit ordering - this may "
-                "cause Hypothesis to produce unstable results between runs."
-            )
-
-        return st.sampled_from(
-            [
-                (
-                    choice.value
-                    if isinstance(choice, df.models.ModelChoiceIteratorValue)
-                    else choice  # Empty value, if included.
-                )
-                for choice, _ in field.choices
-            ]
-        )
-
-    # Accessing field.choices causes database access, so defer the strategy.
-    return st.deferred(_strategy)
+    pass
 
 
 @register_for(df.ModelChoiceField)
 def _for_model_choice(field):
-    return _model_choice_strategy(field)
+    pass
 
 
 @register_for(df.ModelMultipleChoiceField)
 def _for_model_multiple_choice(field):
-    min_size = 1 if field.required else 0
-    return st.lists(_model_choice_strategy(field), min_size=min_size, unique=True)
+    pass
 
 
 def register_field_strategy(
@@ -340,17 +225,7 @@ def register_field_strategy(
     :class:`django.forms.Field`, which must not already be registered.
     ``strategy`` must be a :class:`~hypothesis.strategies.SearchStrategy`.
     """
-    if not issubclass(field_type, (dm.Field, df.Field)):
-        raise InvalidArgument(f"{field_type=} must be a subtype of Field")
-    check_type(st.SearchStrategy, strategy, "strategy")
-    if field_type in _global_field_lookup:
-        raise InvalidArgument(
-            f"{field_type=} already has a registered "
-            f"strategy ({_global_field_lookup[field_type]!r})"
-        )
-    if issubclass(field_type, dm.AutoField):
-        raise InvalidArgument("Cannot register a strategy for an AutoField")
-    _global_field_lookup[field_type] = strategy
+    pass
 
 
 def from_field(field: F) -> st.SearchStrategy[F | None]:
@@ -366,52 +241,4 @@ def from_field(field: F) -> st.SearchStrategy[F | None]:
     Field *instance*, rather than a Field *subtype*, so that it has access to
     instance attributes such as string length and validators.
     """
-    check_type((dm.Field, df.Field), field, "field")
-
-    # The following isinstance check must occur *before* the getattr
-    # check. In the case of ModelChoicesField, evaluating
-    # field.choices causes database access, which we want to avoid if
-    # we don't have a connection (the generated strategies for
-    # ModelChoicesField defer evaluation of `choices').
-    if not isinstance(field, df.ModelChoiceField) and getattr(field, "choices", False):
-        choices: list = []
-        for value, name_or_optgroup in field.choices:
-            if isinstance(name_or_optgroup, (list, tuple)):
-                choices.extend(key for key, _ in name_or_optgroup)
-            else:
-                choices.append(value)
-        # form fields automatically include an empty choice, strip it out
-        if "" in choices:
-            choices.remove("")
-        min_size = 1
-        if isinstance(field, (dm.CharField, dm.TextField)) and field.blank:
-            choices.insert(0, "")
-        elif isinstance(field, (df.Field)) and not field.required:
-            choices.insert(0, "")
-            min_size = 0
-        strategy = st.sampled_from(choices)
-        if isinstance(field, (df.MultipleChoiceField, df.TypedMultipleChoiceField)):
-            strategy = st.lists(st.sampled_from(choices), min_size=min_size)
-    else:
-        if type(field) not in _global_field_lookup:
-            if getattr(field, "null", False):
-                return st.none()
-            raise ResolutionFailed(f"Could not infer a strategy for {field!r}")
-        strategy = _global_field_lookup[type(field)]  # type: ignore
-        if not isinstance(strategy, st.SearchStrategy):
-            strategy = strategy(field)
-    assert isinstance(strategy, st.SearchStrategy)
-    if field.validators:
-
-        def validate(value):
-            try:
-                field.run_validators(value)
-                return True
-            except django.core.exceptions.ValidationError:
-                return False
-
-        strategy = strategy.filter(validate)
-
-    if getattr(field, "null", False):
-        return st.none() | strategy
-    return strategy
+    pass

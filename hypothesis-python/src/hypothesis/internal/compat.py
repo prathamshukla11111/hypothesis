@@ -93,7 +93,7 @@ def add_note(exc, note):
 
 
 def escape_unicode_characters(s: str) -> str:
-    return codecs.encode(s, "unicode_escape").decode("ascii")
+    pass
 
 
 def int_from_bytes(data: bytes | bytearray) -> int:
@@ -252,29 +252,7 @@ def bad_django_TestCase(runner: Optional["ConjectureRunner"]) -> bool:
 if sys.version_info[:2] < (3, 12):
 
     def _asdict_inner(obj, dict_factory):
-        if dataclasses._is_dataclass_instance(obj):
-            return dict_factory(
-                (f.name, _asdict_inner(getattr(obj, f.name), dict_factory))
-                for f in dataclasses.fields(obj)
-            )
-        elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
-            return type(obj)(*[_asdict_inner(v, dict_factory) for v in obj])
-        elif isinstance(obj, (list, tuple)):
-            return type(obj)(_asdict_inner(v, dict_factory) for v in obj)
-        elif isinstance(obj, dict):
-            if hasattr(type(obj), "default_factory"):
-                result = type(obj)(obj.default_factory)
-                for k, v in obj.items():
-                    result[_asdict_inner(k, dict_factory)] = _asdict_inner(
-                        v, dict_factory
-                    )
-                return result
-            return type(obj)(
-                (_asdict_inner(k, dict_factory), _asdict_inner(v, dict_factory))
-                for k, v in obj.items()
-            )
-        else:
-            return copy.deepcopy(obj)
+        pass
 
     def dataclass_asdict(obj, *, dict_factory=dict):
         """
@@ -284,9 +262,7 @@ if sys.version_info[:2] < (3, 12):
         This should be removed whenever we drop support for 3.11. We can use the
         standard dataclasses.asdict after that point.
         """
-        if not dataclasses._is_dataclass_instance(obj):  # pragma: no cover
-            raise TypeError("asdict() should be called on dataclass instances")
-        return _asdict_inner(obj, dict_factory)
+        pass
 
 else:  # pragma: no cover
     dataclass_asdict = dataclasses.asdict
@@ -297,13 +273,7 @@ if sys.version_info[:2] < (3, 13):
     # copied from 3.13 docs reference implementation
 
     def batched(iterable, n, *, strict=False):
-        if n < 1:
-            raise ValueError("n must be at least one")
-        iterator = iter(iterable)
-        while batch := tuple(itertools.islice(iterator, n)):
-            if strict and len(batch) != n:  # pragma: no cover
-                raise ValueError("batched(): incomplete batch")
-            yield batch
+        pass
 
 else:  # pragma: no cover
     batched = itertools.batched

@@ -272,35 +272,7 @@ class DateStrategy(SearchStrategy):
         )
 
     def filter(self, condition):
-        if (
-            isinstance(condition, partial)
-            and len(args := condition.args) == 1
-            and not condition.keywords
-            and isinstance(arg := args[0], dt.date)
-            and condition.func in (op.lt, op.le, op.eq, op.ge, op.gt)
-        ):
-            try:
-                arg += dt.timedelta(days={op.lt: 1, op.gt: -1}.get(condition.func, 0))
-            except OverflowError:  # gt date.max, or lt date.min
-                return nothing()
-            lo, hi = {
-                # We're talking about op(arg, x) - the reverse of our usual intuition!
-                op.lt: (arg, self.max_value),  # lambda x: arg < x
-                op.le: (arg, self.max_value),  # lambda x: arg <= x
-                op.eq: (arg, arg),  #            lambda x: arg == x
-                op.ge: (self.min_value, arg),  # lambda x: arg >= x
-                op.gt: (self.min_value, arg),  # lambda x: arg > x
-            }[condition.func]
-            lo = max(lo, self.min_value)
-            hi = min(hi, self.max_value)
-            print(lo, hi)
-            if hi < lo:
-                return nothing()
-            if lo <= self.min_value and self.max_value <= hi:
-                return self
-            return dates(lo, hi)
-
-        return super().filter(condition)
+        pass
 
 
 @defines_strategy(force_reusable_values=True)
@@ -447,8 +419,7 @@ def timezone_keys(
         return strategy
 
     def sample_with_prefixes(zone):
-        keys_with_prefixes = (zone, f"posix/{zone}", f"right/{zone}")
-        return sampled_from([key for key in keys_with_prefixes if valid_key(key)])
+        pass
 
     return strategy.flatmap(sample_with_prefixes)
 

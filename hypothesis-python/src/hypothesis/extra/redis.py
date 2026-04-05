@@ -97,7 +97,7 @@ class RedisExampleDatabase(ExampleDatabase):
         return base64.b64encode(value).decode("ascii")
 
     def _decode(self, value: str) -> bytes:
-        return base64.b64decode(value)
+        pass
 
     def fetch(self, key: bytes) -> Iterable[bytes]:
         with self._pipeline(key, execute_and_publish=False) as pipe:
@@ -132,18 +132,10 @@ class RedisExampleDatabase(ExampleDatabase):
     def _handle_message(self, message: dict) -> None:
         # other message types include "subscribe" and "unsubscribe". these are
         # sent to the client, but not to the pubsub channel.
-        assert message["type"] == "message"
-        data = json.loads(message["data"])
-        event_type = data[0]
-        self._broadcast_change(
-            (event_type, tuple(self._decode(v) for v in data[1]))  # type: ignore
-        )
+        pass
 
     def _start_listening(self) -> None:
-        self._pubsub = self.redis.pubsub()
-        self._pubsub.subscribe(**{self.listener_channel: self._handle_message})
+        pass
 
     def _stop_listening(self) -> None:
-        self._pubsub.unsubscribe()
-        self._pubsub.close()
-        self._pubsub = None
+        pass

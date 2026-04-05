@@ -88,59 +88,29 @@ class LazyStrategy(SearchStrategy[Ex]):
         self._transformations = transforms
 
     def calc_is_empty(self, recur: RecurT) -> bool:
-        return recur(self.wrapped_strategy)
+        pass
 
     def calc_has_reusable_values(self, recur: RecurT) -> bool:
-        return recur(self.wrapped_strategy)
+        pass
 
     def calc_is_cacheable(self, recur: RecurT) -> bool:
-        for source in (self.__args, self.__kwargs.values()):
-            for v in source:
-                if isinstance(v, SearchStrategy) and not v.is_cacheable:
-                    return False
-        return True
+        pass
 
     def calc_label(self) -> int:
-        return self.wrapped_strategy.label
+        pass
 
     @property
     def wrapped_strategy(self) -> SearchStrategy[Ex]:
-        if self.__wrapped_strategy is None:
-            check_sideeffect_during_initialization("lazy evaluation of {!r}", self)
-
-            unwrapped_args = tuple(unwrap_strategies(s) for s in self.__args)
-            unwrapped_kwargs = {
-                k: unwrap_strategies(v) for k, v in self.__kwargs.items()
-            }
-
-            base = self.function(*self.__args, **self.__kwargs)
-            if unwrapped_args == self.__args and unwrapped_kwargs == self.__kwargs:
-                _wrapped_strategy = base
-            else:
-                _wrapped_strategy = self.function(*unwrapped_args, **unwrapped_kwargs)
-            for method, fn in self._transformations:
-                _wrapped_strategy = getattr(_wrapped_strategy, method)(fn)
-            self.__wrapped_strategy = _wrapped_strategy
-        assert self.__wrapped_strategy is not None
-        return self.__wrapped_strategy
+        pass
 
     def __with_transform(self, method, fn):
-        repr_ = self.__representation
-        if repr_:
-            repr_ = f"{repr_}.{method}({get_pretty_function_description(fn)})"
-        return LazyStrategy(
-            self.function,
-            self.__args,
-            self.__kwargs,
-            transforms=(*self._transformations, (method, fn)),
-            force_repr=repr_,
-        )
+        pass
 
     def map(self, pack):
-        return self.__with_transform("map", pack)
+        pass
 
     def filter(self, condition):
-        return self.__with_transform("filter", condition)
+        pass
 
     def do_validate(self) -> None:
         w = self.wrapped_strategy

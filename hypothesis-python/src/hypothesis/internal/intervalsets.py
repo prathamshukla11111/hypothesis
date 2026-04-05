@@ -293,19 +293,4 @@ class IntervalSet:
         """
         Inverse of char_in_shrink_order.
         """
-        assert len(c) == 1
-        i = self.index(ord(c))
-
-        if i <= self._idx_of_Z:
-            n = self._idx_of_Z - self._idx_of_zero
-            # Rewrite [zero_point, Z_point] to [0, n].
-            if self._idx_of_zero <= i <= self._idx_of_Z:
-                i -= self._idx_of_zero
-                assert 0 <= i <= n
-            # Rewrite [zero_point, 0] to [n + 1, Z_point].
-            else:
-                i = self._idx_of_zero - i + n
-                assert n + 1 <= i <= self._idx_of_Z
-            assert 0 <= i <= self._idx_of_Z
-
-        return i
+        pass

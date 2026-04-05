@@ -151,34 +151,7 @@ def make_float_clamper(
     range_size = min(max_value - min_value, float_info.max)
 
     def float_clamper(f: float) -> float:
-        if choice_permitted(
-            f,
-            {
-                "min_value": min_value,
-                "max_value": max_value,
-                "allow_nan": allow_nan,
-                "smallest_nonzero_magnitude": smallest_nonzero_magnitude,
-            },
-        ):
-            return f
-        # Outside bounds; pick a new value, sampled from the allowed range,
-        # using the mantissa bits.
-        mant = float_to_int(abs(f)) & mantissa_mask
-        f = min_value + range_size * (mant / mantissa_mask)
-
-        # if we resampled into the space disallowed by smallest_nonzero_magnitude,
-        # default to smallest_nonzero_magnitude.
-        if 0 < abs(f) < smallest_nonzero_magnitude:
-            f = smallest_nonzero_magnitude
-            # we must have either -smallest_nonzero_magnitude <= min_value or
-            # smallest_nonzero_magnitude >= max_value, or no values would be
-            # possible. If smallest_nonzero_magnitude is not valid (because it's
-            # larger than max_value), then -smallest_nonzero_magnitude must be valid.
-            if smallest_nonzero_magnitude > max_value:
-                f *= -1
-
-        # Re-enforce the bounds (just in case of floating point arithmetic error)
-        return clamp(min_value, f, max_value)
+        pass
 
     return float_clamper
 

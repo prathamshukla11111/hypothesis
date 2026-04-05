@@ -28,10 +28,10 @@ ModelT = TypeVar("ModelT", bound=dm.Model)
 
 class HypothesisTestCase:
     def setup_example(self):
-        self._pre_setup()
+        pass
 
     def teardown_example(self, example):
-        self._post_teardown()
+        pass
 
     def __call__(self, result=None):
         testMethod = getattr(self, self._testMethodName)
@@ -90,45 +90,13 @@ def from_model(
     ``...`` (:obj:`python:Ellipsis`) as a keyword argument to infer a strategy for
     a field which has a default value instead of using the default.
     """
-    if not issubclass(model, dm.Model):
-        raise InvalidArgument(f"{model=} must be a subtype of Model")
-
-    fields_by_name = {f.name: f for f in model._meta.concrete_fields}
-    for name, value in sorted(field_strategies.items()):
-        if value is ...:
-            field_strategies[name] = from_field(fields_by_name[name])
-    for name, field in sorted(fields_by_name.items()):
-        if (
-            name not in field_strategies
-            and not field.auto_created
-            and not isinstance(field, dm.AutoField)
-            and not isinstance(field, getattr(dm, "GeneratedField", ()))
-            and field.default is dm.fields.NOT_PROVIDED
-        ):
-            field_strategies[name] = from_field(field)
-
-    for field in field_strategies:
-        if model._meta.get_field(field).primary_key:
-            # The primary key is generated as part of the strategy. We
-            # want to find any existing row with this primary key and
-            # overwrite its contents.
-            kwargs = {field: field_strategies.pop(field)}
-            kwargs["defaults"] = st.fixed_dictionaries(field_strategies)  # type: ignore
-            return _models_impl(st.builds(model.objects.update_or_create, **kwargs))
-
-    # The primary key is not generated as part of the strategy, so we
-    # just match against any row that has the same value for all
-    # fields.
-    return _models_impl(st.builds(model.objects.get_or_create, **field_strategies))
+    pass
 
 
 @st.composite
 def _models_impl(draw, strat):
     """Handle the nasty part of drawing a value for models()"""
-    try:
-        return draw(strat)[0]
-    except IntegrityError:
-        reject()
+    pass
 
 
 @defines_strategy()
@@ -159,72 +127,10 @@ def from_form(
     ``...`` (:obj:`python:Ellipsis`) as a keyword argument to infer a strategy for
     a field which has a default value instead of using the default.
     """
-    # currently unsupported:
-    # ComboField
-    # FilePathField
-    # ImageField
-    form_kwargs = form_kwargs or {}
-    if not issubclass(form, df.BaseForm):
-        raise InvalidArgument(f"{form=} must be a subtype of Form")
-
-    # Forms are a little bit different from models. Model classes have
-    # all their fields defined, whereas forms may have different fields
-    # per-instance. So, we ought to instantiate the form and get the
-    # fields from the instance, thus we need to accept the kwargs for
-    # instantiation as well as the explicitly defined strategies
-
-    unbound_form = form(**form_kwargs)
-    fields_by_name = {}
-    for name, field in unbound_form.fields.items():
-        if isinstance(field, df.MultiValueField):
-            # PS: So this is a little strange, but MultiValueFields must
-            # have their form data encoded in a particular way for the
-            # values to actually be picked up by the widget instances'
-            # ``value_from_datadict``.
-            # E.g. if a MultiValueField named 'mv_field' has 3
-            # sub-fields then the ``value_from_datadict`` will look for
-            # 'mv_field_0', 'mv_field_1', and 'mv_field_2'. Here I'm
-            # decomposing the individual sub-fields into the names that
-            # the form validation process expects
-            for i, _field in enumerate(field.fields):
-                fields_by_name[f"{name}_{i}"] = _field
-        else:
-            fields_by_name[name] = field
-
-    for name, value in sorted(field_strategies.items()):
-        if value is ...:
-            field_strategies[name] = from_field(fields_by_name[name])
-
-    for name, field in sorted(fields_by_name.items()):
-        if name not in field_strategies and not field.disabled:
-            field_strategies[name] = from_field(field)
-
-    # files are handled a bit specially in forms. A Form accepts two arguments:
-    # `data` and `files`. The former is for normal fields, and the latter is for
-    # file fields.
-    # see https://docs.djangoproject.com/en/5.1/ref/forms/api/#binding-uploaded-files.
-    data_strategies: dict[str, Any] = {}
-    file_strategies: dict[str, Any] = {}
-    for name, field in field_strategies.items():
-        form_field = fields_by_name[name]
-        dictionary = (
-            file_strategies if isinstance(form_field, df.FileField) else data_strategies
-        )
-        dictionary[name] = field
-
-    return _forms_impl(
-        st.builds(
-            partial(form, **form_kwargs),  # type: ignore
-            data=st.fixed_dictionaries(data_strategies),
-            files=st.fixed_dictionaries(file_strategies),
-        )
-    )
+    pass
 
 
 @st.composite
 def _forms_impl(draw, strat):
     """Handle the nasty part of drawing a value for from_form()"""
-    try:
-        return draw(strat)
-    except ValidationError:
-        reject()
+    pass

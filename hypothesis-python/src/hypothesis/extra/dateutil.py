@@ -33,10 +33,7 @@ def __zone_sort_key(zone):
     """Sort by absolute UTC offset at reference date,
     positive first, with ties broken by name.
     """
-    assert zone is not None
-    offset = zone.utcoffset(dt.datetime(2000, 1, 1))
-    offset = 999 if offset is None else offset
-    return (abs(offset), -offset, str(zone))
+    pass
 
 
 @cacheable

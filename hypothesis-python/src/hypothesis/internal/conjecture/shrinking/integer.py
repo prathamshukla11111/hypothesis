@@ -55,21 +55,17 @@ class Integer(Shrinker):
 
         @find_integer
         def try_mask(k):
-            if k >= n:
-                return False
-            mask = (1 << (n - k)) - 1
-            return self.consider(mask & base)
+            pass
 
     @property
     def size(self) -> int:
-        return self.current.bit_length()
+        pass
 
     def shrink_by_multiples(self, k):
         base = self.current
 
         @find_integer
         def shrunk(n):
-            attempt = base - n * k
-            return attempt >= 0 and self.consider(attempt)
+            pass
 
         return shrunk > 0

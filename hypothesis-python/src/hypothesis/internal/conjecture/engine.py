@@ -123,7 +123,7 @@ class HealthCheckState:
 
     @property
     def total_draw_time(self) -> float:
-        return math.fsum(sum(self.draw_times.values(), start=[]))
+        pass
 
     def timing_report(self) -> str:
         """Return a terminal report describing what was slow."""
@@ -366,9 +366,7 @@ class ConjectureRunner:
 
     @property
     def using_hypothesis_backend(self) -> bool:
-        return (
-            self.settings.backend == "hypothesis" or self._switch_to_hypothesis_provider
-        )
+        pass
 
     def explain_next_call_as(self, explanation: str) -> None:
         self.__pending_call_explanation = explanation
@@ -395,7 +393,7 @@ class ConjectureRunner:
 
     @property
     def should_optimise(self) -> bool:
-        return Phase.target in self.settings.phases
+        pass
 
     def __tree_is_exhausted(self) -> bool:
         return self.tree.is_exhausted and self.using_hypothesis_backend
@@ -747,7 +745,7 @@ class ConjectureRunner:
         self.record_for_health_check(data)
 
     def on_pareto_evict(self, data: ConjectureResult) -> None:
-        self.settings.database.delete(self.pareto_key, choices_to_bytes(data.choices))
+        pass
 
     def generate_novel_prefix(self) -> tuple[ChoiceT, ...]:
         """Uses the tree to proactively generate a starting choice sequence
@@ -910,11 +908,11 @@ class ConjectureRunner:
 
     @property
     def secondary_key(self) -> bytes | None:
-        return self.sub_key(b"secondary")
+        pass
 
     @property
     def pareto_key(self) -> bytes | None:
-        return self.sub_key(b"pareto")
+        pass
 
     def debug(self, message: str) -> None:
         if self.settings.verbosity >= Verbosity.debug:
@@ -922,7 +920,7 @@ class ConjectureRunner:
 
     @property
     def report_debug_info(self) -> bool:
-        return self.settings.verbosity >= Verbosity.debug
+        pass
 
     def debug_data(self, data: ConjectureData | ConjectureResult) -> None:
         if not self.report_debug_info:
@@ -976,9 +974,7 @@ class ConjectureRunner:
 
     @property
     def database(self) -> ExampleDatabase | None:
-        if self.database_key is None:
-            return None
-        return self.settings.database
+        pass
 
     def has_existing_examples(self) -> bool:
         return self.database is not None and Phase.reuse in self.settings.phases

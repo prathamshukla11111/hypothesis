@@ -119,37 +119,7 @@ class ChoiceNode:
         viewing the tree as a whole. Just that when viewing this node in
         isolation, this is the simplest the node can get.
         """
-        if self.was_forced:
-            return True
-
-        if self.type != "float":
-            zero_value = choice_from_index(0, self.type, self.constraints)
-            return choice_equal(self.value, zero_value)
-        else:
-            constraints = cast(FloatConstraints, self.constraints)
-            min_value = constraints["min_value"]
-            max_value = constraints["max_value"]
-            shrink_towards = 0.0
-
-            if min_value == -math.inf and max_value == math.inf:
-                return choice_equal(self.value, shrink_towards)
-
-            if (
-                not math.isinf(min_value)
-                and not math.isinf(max_value)
-                and math.ceil(min_value) <= math.floor(max_value)
-            ):
-                # the interval contains an integer. the simplest integer is the
-                # one closest to shrink_towards
-                shrink_towards = max(math.ceil(min_value), shrink_towards)
-                shrink_towards = min(math.floor(max_value), shrink_towards)
-                return choice_equal(self.value, float(shrink_towards))
-
-            # the real answer here is "the value in [min_value, max_value] with
-            # the lowest denominator when represented as a fraction".
-            # It would be good to compute this correctly in the future, but it's
-            # also not incorrect to be conservative here.
-            return False
+        pass
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ChoiceNode):
@@ -580,8 +550,7 @@ def choice_key(choice: ChoiceT) -> ChoiceKeyT:
 
 
 def choice_equal(choice1: ChoiceT, choice2: ChoiceT) -> bool:
-    assert type(choice1) is type(choice2), (choice1, choice2)
-    return choice_key(choice1) == choice_key(choice2)
+    pass
 
 
 def choice_constraints_equal(
@@ -589,9 +558,7 @@ def choice_constraints_equal(
     constraints1: ChoiceConstraintsT,
     constraints2: ChoiceConstraintsT,
 ) -> bool:
-    return choice_constraints_key(choice_type, constraints1) == choice_constraints_key(
-        choice_type, constraints2
-    )
+    pass
 
 
 def choice_constraints_key(

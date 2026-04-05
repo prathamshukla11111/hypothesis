@@ -80,13 +80,7 @@ MAX_POSITIVE_EXPONENT = MAX_EXPONENT - 1 - BIAS
 
 
 def exponent_key(e: int) -> float:
-    if e == MAX_EXPONENT:
-        return float("inf")
-    unbiased = e - BIAS
-    if unbiased < 0:
-        return 10000 - unbiased
-    else:
-        return unbiased
+    pass
 
 
 ENCODING_TABLE = array("H", sorted(range(MAX_EXPONENT + 1), key=exponent_key))
@@ -113,12 +107,7 @@ def encode_exponent(e: int) -> int:
 
 
 def reverse_byte(b: int) -> int:
-    result = 0
-    for _ in range(8):
-        result <<= 1
-        result |= b & 1
-        b >>= 1
-    return result
+    pass
 
 
 # Table mapping individual bytes to the equivalent byte with the bits of the

@@ -18,10 +18,7 @@ from hypothesis.utils.dynamicvariables import DynamicVariable
 
 
 def default(value: object) -> None:
-    try:
-        print(value)
-    except UnicodeEncodeError:
-        print(escape_unicode_characters(str(value)))
+    pass
 
 
 ReporterT: TypeAlias = Callable[[object], None]

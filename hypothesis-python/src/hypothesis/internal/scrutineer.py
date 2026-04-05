@@ -39,7 +39,7 @@ Trace: TypeAlias = frozenset[Branch]
 def should_trace_file(fname: str) -> bool:
     # fname.startswith("<") indicates runtime code-generation via compile,
     # e.g. compile("def ...", "<string>", "exec") in e.g. attrs methods.
-    return not (is_hypothesis_file(fname) or fname.startswith("<"))
+    pass
 
 
 # where possible, we'll use 3.12's new sys.monitoring module for low-overhead
@@ -77,31 +77,13 @@ class Tracer:
 
     @property
     def branches(self) -> Trace:
-        return frozenset(self._branches)
+        pass
 
     def trace(self, frame, event, arg):
-        try:
-            if event == "call":
-                return self.trace
-            elif event == "line":
-                fname = frame.f_code.co_filename
-                if should_trace_file(fname):
-                    current_location = (fname, frame.f_lineno)
-                    self._branches.add((self._previous_location, current_location))
-                    self._previous_location = current_location
-        except RecursionError:
-            pass
+        pass
 
     def trace_line(self, code: types.CodeType, line_number: int) -> None:
-        fname = code.co_filename
-        if not should_trace_file(fname):
-            # this function is only called on 3.12+, but we want to avoid an
-            # assertion to that effect for performance.
-            return sys.monitoring.DISABLE  # type: ignore
-
-        current_location = (fname, line_number)
-        self._branches.add((self._previous_location, current_location))
-        self._previous_location = current_location
+        pass
 
     def __enter__(self) -> "Self":
         self._tried_and_failed_to_trace = False
@@ -302,34 +284,9 @@ def explanatory_lines(traces, settings):
 
 @functools.lru_cache
 def _get_git_repo_root() -> Path:
-    try:
-        where = subprocess.run(
-            ["git", "rev-parse", "--show-toplevel"],
-            check=True,
-            timeout=10,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-        ).stdout.strip()
-    except Exception:  # pragma: no cover
-        return Path().absolute().parents[-1]
-    else:
-        return Path(where)
+    pass
 
 
 def tractable_coverage_report(trace: Trace) -> dict[str, list[int]]:
     """Report a simple coverage map which is (probably most) of the user's code."""
-    coverage: dict = {}
-    t = dict(trace)
-    for file, line in set(t.keys()).union(t.values()) - {None}:  # type: ignore
-        # On Python <= 3.11, we can use coverage.py xor Hypothesis' tracer,
-        # so the trace will be empty and this line never run under coverage.
-        coverage.setdefault(file, set()).add(line)  # pragma: no cover
-    stdlib_fragment = f"{os.sep}lib{os.sep}python3.{sys.version_info.minor}{os.sep}"
-    return {
-        k: sorted(v)
-        for k, v in coverage.items()
-        if stdlib_fragment not in k
-        and (p := Path(k)).is_relative_to(_get_git_repo_root())
-        and "site-packages" not in p.parts
-    }
+    pass

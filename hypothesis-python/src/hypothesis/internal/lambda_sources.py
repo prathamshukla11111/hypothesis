@@ -46,8 +46,7 @@ def extract_all_lambdas(tree):
     class Visitor(ast.NodeVisitor):
 
         def visit_Lambda(self, node):
-            lambdas.append(node)
-            self.visit(node.body)
+            pass
 
     Visitor().visit(tree)
     return lambdas
@@ -58,8 +57,7 @@ def extract_all_attributes(tree):
 
     class Visitor(ast.NodeVisitor):
         def visit_Attribute(self, node):
-            attributes.append(node)
-            self.visit(node.value)
+            pass
 
     Visitor().visit(tree)
     return attributes

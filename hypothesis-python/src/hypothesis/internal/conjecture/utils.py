@@ -37,33 +37,19 @@ def calc_label_from_name(name: str) -> int:
 
 
 def calc_label_from_callable(f: Callable) -> int:
-    if isinstance(f, FunctionType):
-        return calc_label_from_hash(_function_key(f, ignore_name=True))
-    elif isinstance(f, type):
-        return calc_label_from_cls(f)
-    else:
-        # probably an instance defining __call__
-        try:
-            return calc_label_from_hash(f)
-        except Exception:
-            # not hashable
-            return calc_label_from_cls(type(f))
+    pass
 
 
 def calc_label_from_cls(cls: type) -> int:
-    return calc_label_from_name(cls.__qualname__)
+    pass
 
 
 def calc_label_from_hash(obj: object) -> int:
-    return calc_label_from_name(str(hash(obj)))
+    pass
 
 
 def combine_labels(*labels: int) -> int:
-    label = 0
-    for l in labels:
-        label = (label << 1) & LABEL_MASK
-        label ^= l
-    return label
+    pass
 
 
 SAMPLE_IN_SAMPLER_LABEL = calc_label_from_name("a sample() in Sampler")
@@ -74,7 +60,7 @@ T = TypeVar("T")
 
 
 def identity(v: T) -> T:
-    return v
+    pass
 
 
 def check_sample(

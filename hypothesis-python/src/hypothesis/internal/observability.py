@@ -102,7 +102,7 @@ def _choice_to_json(choice: ChoiceT | None) -> Any:
 
 
 def choices_to_json(choices: tuple[ChoiceT, ...]) -> list[Any]:
-    return [_choice_to_json(choice) for choice in choices]
+    pass
 
 
 def _constraints_to_json(
@@ -484,25 +484,7 @@ _deliver_to_file_lock = Lock()
 def _deliver_to_file(
     observation: Observation, thread_id: int
 ) -> None:  # pragma: no cover
-    from hypothesis.strategies._internal.utils import to_jsonable
-
-    kind = "testcases" if observation.type == "test_case" else "info"
-    fname = storage_directory("observed", f"{date.today().isoformat()}_{kind}.jsonl")
-    fname.parent.mkdir(exist_ok=True, parents=True)
-
-    observation_bytes = (
-        json.dumps(to_jsonable(observation, avoid_realization=False)) + "\n"
-    )
-    # only allow one conccurent file write to avoid write races. This is likely to make
-    # HYPOTHESIS_EXPERIMENTAL_OBSERVABILITY quite slow under threading. A queue
-    # would be an improvement, but that requires a background thread, and I
-    # would prefer to avoid a thread in the single-threaded case. We could
-    # switch over to a queue if we detect multithreading, but it's tricky to get
-    # right.
-    with _deliver_to_file_lock:
-        _WROTE_TO.add(fname)
-        with fname.open(mode="a") as f:
-            f.write(observation_bytes)
+    pass
 
 
 _imported_at = time.time()

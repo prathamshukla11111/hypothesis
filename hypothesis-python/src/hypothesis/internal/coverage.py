@@ -87,23 +87,17 @@ if IN_COVERAGE_TESTS:
 
     @contextmanager
     def check(name):
-        with check_block(name, 2):
-            yield
+        pass
 
     def check_function(f: Func) -> Func:
         @proxies(f)
-        def accept(*args, **kwargs):
-            # depth of 2 because of the proxy function calling us.
-            with check_block(f.__name__, 2):
-                return f(*args, **kwargs)
-
-        return accept
+        pass
 
 else:  # pragma: no cover
 
     def check_function(f: Func) -> Func:
-        return f
+        pass
 
     @contextmanager
     def check(name):
-        yield
+        pass

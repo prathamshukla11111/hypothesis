@@ -456,14 +456,7 @@ def find_annotated_strategy(annotated_type):
 
 def has_type_arguments(type_):
     """Decides whethere or not this type has applied type arguments."""
-    args = getattr(type_, "__args__", None)
-    if args and isinstance(type_, (typing._GenericAlias, GenericAlias)):
-        # There are some cases when declared types do already have type arguments
-        # Like `Sequence`, that is `_GenericAlias(abc.Sequence[T])[T]`
-        parameters = getattr(type_, "__parameters__", None)
-        if parameters:  # So, we need to know if type args are just "aliases"
-            return args != parameters
-    return bool(args)
+    pass
 
 
 def is_generic_type(type_):
@@ -490,17 +483,7 @@ def _try_import_forward_ref(thing, typ, *, type_params):  # pragma: no cover
     This function fully covered, but is excluded from coverage
     because we can only cover each path in a separate python version.
     """
-    try:
-        kw = {"globalns": vars(sys.modules[thing.__module__]), "localns": None}
-        if __EVAL_TYPE_TAKES_TYPE_PARAMS:
-            kw["type_params"] = type_params
-        return typing._eval_type(typ, **kw)
-    except (KeyError, AttributeError, NameError):
-        # We fallback to `ForwardRef` instance, you can register it as a type as well:
-        # >>> from typing import ForwardRef
-        # >>> from hypothesis import strategies as st
-        # >>> st.register_type_strategy(ForwardRef('YourType'), your_strategy)
-        return typ
+    pass
 
 
 def from_typing_type(thing):
@@ -684,11 +667,7 @@ def from_typing_type(thing):
 
 def can_cast(type, value):
     """Determine if value can be cast to type."""
-    try:
-        type(value)
-        return True
-    except Exception:
-        return False
+    pass
 
 
 def _networks(bits):
@@ -908,10 +887,7 @@ _global_type_lookup.update(
 # it until the method is called the first time, at which point we replace the
 # entry in the lookup table with the direct call.
 def _from_numpy_type(thing: type) -> st.SearchStrategy | None:
-    from hypothesis.extra.numpy import _from_type
-
-    _global_extra_lookup["numpy"] = _from_type
-    return _from_type(thing)
+    pass
 
 
 _global_extra_lookup: dict[str, typing.Callable[[type], st.SearchStrategy | None]] = {
@@ -930,20 +906,7 @@ def register(type_, fallback=None, *, module=typing):
             return lambda f: f
 
     def inner(func):
-        nonlocal type_
-        if fallback is None:
-            _global_type_lookup[type_] = func
-            return func
-
-        @functools.wraps(func)
-        def really_inner(thing):
-            if getattr(thing, "__args__", None) is None:
-                return fallback
-            return func(thing)
-
-        _global_type_lookup[type_] = really_inner
-        _global_type_lookup[get_origin(type_) or type_] = really_inner
-        return really_inner
+        pass
 
     return inner
 
@@ -952,49 +915,21 @@ def register(type_, fallback=None, *, module=typing):
 @register("Type")
 @register("Type", module=typing_extensions)
 def resolve_Type(thing):
-    if getattr(thing, "__args__", None) is None or get_args(thing) == ():
-        return _fallback_type_strategy
-    args = (thing.__args__[0],)
-    if is_a_union(args[0]):
-        args = args[0].__args__
-    # Duplicate check from from_type here - only paying when needed.
-    args = list(args)
-    for i, a in enumerate(args):
-        if type(a) in (typing.ForwardRef, str):
-            try:
-                args[i] = getattr(builtins, getattr(a, "__forward_arg__", a))
-            except AttributeError:
-                raise ResolutionFailed(
-                    f"Cannot find the type referenced by {thing} - try using "
-                    f"st.register_type_strategy({thing}, st.from_type(...))"
-                ) from None
-    return st.sampled_from(sorted(args, key=type_sorting_key))
+    pass
 
 
 @register("List", st.builds(list))
 def resolve_List(thing):
-    return st.lists(st.from_type(thing.__args__[0]))
+    pass
 
 
 @register("Tuple", st.builds(tuple))
 def resolve_Tuple(thing):
-    elem_types = getattr(thing, "__args__", None) or ()
-    if len(elem_types) == 2 and elem_types[-1] is Ellipsis:
-        return st.lists(st.from_type(elem_types[0])).map(tuple)
-    elif len(elem_types) == 1 and elem_types[0] == ():  # pragma: no cover
-        # Empty tuple; see issue #1583.
-        # Only possible on 3.10. `from typing import Tuple; Tuple[()].__args__`
-        # is ((),) on 3.10, and () on 3.11+.
-        return st.tuples()
-    return st.tuples(*map(st.from_type, elem_types))
+    pass
 
 
 def _can_hash(val):
-    try:
-        hash(val)
-        return True
-    except Exception:
-        return False
+    pass
 
 
 # Some types are subclasses of typing.Hashable, because they define a __hash__
@@ -1007,93 +942,75 @@ ALWAYS_HASHABLE_TYPES = {type(None), bool, int, float, complex, str, bytes}
 
 
 def _from_hashable_type(type_):
-    if type_ in ALWAYS_HASHABLE_TYPES:
-        return st.from_type(type_)
-    else:
-        return st.from_type(type_).filter(_can_hash)
+    pass
 
 
 @register("Set", st.builds(set))
 @register(typing.MutableSet, st.builds(set))
 def resolve_Set(thing):
-    return st.sets(_from_hashable_type(thing.__args__[0]))
+    pass
 
 
 @register("FrozenSet", st.builds(frozenset))
 def resolve_FrozenSet(thing):
-    return st.frozensets(_from_hashable_type(thing.__args__[0]))
+    pass
 
 
 @register("Dict", st.builds(dict))
 def resolve_Dict(thing):
     # If thing is a Collection instance, we need to fill in the values
-    keys, vals, *_ = thing.__args__ * 2
-    return st.dictionaries(
-        _from_hashable_type(keys),
-        st.none() if vals is None else st.from_type(vals),
-    )
+    pass
 
 
 @register("DefaultDict", st.builds(collections.defaultdict))
 @register("DefaultDict", st.builds(collections.defaultdict), module=typing_extensions)
 def resolve_DefaultDict(thing):
-    return resolve_Dict(thing).map(lambda d: collections.defaultdict(None, d))
+    pass
 
 
 @register(typing.ItemsView, st.builds(dict).map(dict.items))
 def resolve_ItemsView(thing):
-    return resolve_Dict(thing).map(dict.items)
+    pass
 
 
 @register(typing.KeysView, st.builds(dict).map(dict.keys))
 def resolve_KeysView(thing):
-    return st.dictionaries(_from_hashable_type(thing.__args__[0]), st.none()).map(
-        dict.keys
-    )
+    pass
 
 
 @register(typing.ValuesView, st.builds(dict).map(dict.values))
 def resolve_ValuesView(thing):
-    return st.dictionaries(st.integers(), st.from_type(thing.__args__[0])).map(
-        dict.values
-    )
+    pass
 
 
 @register(typing.Iterator, st.iterables(st.nothing()))
 def resolve_Iterator(thing):
-    return st.iterables(st.from_type(thing.__args__[0]))
+    pass
 
 
 @register(collections.Counter, st.builds(collections.Counter))
 def resolve_Counter(thing):
-    return st.dictionaries(
-        keys=st.from_type(thing.__args__[0]),
-        values=st.integers(),
-    ).map(collections.Counter)
+    pass
 
 
 @register(collections.deque, st.builds(collections.deque))
 def resolve_deque(thing):
-    return st.lists(st.from_type(thing.__args__[0])).map(collections.deque)
+    pass
 
 
 @register(collections.ChainMap, st.builds(dict).map(collections.ChainMap))
 def resolve_ChainMap(thing):
-    return resolve_Dict(thing).map(collections.ChainMap)
+    pass
 
 
 @register(collections.OrderedDict, st.builds(dict).map(collections.OrderedDict))
 def resolve_OrderedDict(thing):
-    return resolve_Dict(thing).map(collections.OrderedDict)
+    pass
 
 
 @register(typing.Pattern, st.builds(re.compile, st.sampled_from(["", b""])))
 def resolve_Pattern(thing):
-    if isinstance(thing.__args__[0], typing.TypeVar):  # pragma: no cover
-        # FIXME: this was covered on Python 3.8, but isn't on 3.10 - we should
-        # work out why not and write some extra tests to help avoid regressions.
-        return st.builds(re.compile, st.sampled_from(["", b""]))
-    return st.just(re.compile(thing.__args__[0]()))
+    pass
 
 
 @register(
@@ -1101,13 +1018,7 @@ def resolve_Pattern(thing):
     st.text().map(partial(re.match, ".", flags=re.DOTALL)).filter(bool),
 )
 def resolve_Match(thing):
-    if thing.__args__[0] == bytes:
-        return (
-            st.binary(min_size=1)
-            .map(lambda c: re.match(b".", c, flags=re.DOTALL))
-            .filter(bool)
-        )
-    return st.text().map(lambda c: re.match(".", c, flags=re.DOTALL)).filter(bool)
+    pass
 
 
 class GeneratorStrategy(st.SearchStrategy):
@@ -1130,8 +1041,7 @@ class GeneratorStrategy(st.SearchStrategy):
 
 @register(typing.Generator, GeneratorStrategy(st.none(), st.none()))
 def resolve_Generator(thing):
-    yields, _, returns = thing.__args__
-    return GeneratorStrategy(st.from_type(yields), st.from_type(returns))
+    pass
 
 
 @register(typing.Callable, st.functions())
@@ -1139,86 +1049,13 @@ def resolve_Callable(thing):
     # Generated functions either accept no arguments, or arbitrary arguments.
     # This is looser than ideal, but anything tighter would generally break
     # use of keyword arguments and we'd rather not force positional-only.
-    if not thing.__args__:  # pragma: no cover  # varies by minor version
-        return st.functions()
-
-    *args_types, return_type = thing.__args__
-
-    # Note that a list can only appear in __args__ under Python 3.9 with the
-    # collections.abc version; see https://bugs.python.org/issue42195
-    if len(args_types) == 1 and isinstance(args_types[0], list):
-        args_types = tuple(args_types[0])  # pragma: no cover
-
-    pep612 = ConcatenateTypes + ParamSpecTypes
-    for arg in args_types:
-        # awkward dance because you can't use Concatenate in isistance or issubclass
-        if getattr(arg, "__origin__", arg) in pep612 or type(arg) in pep612:
-            raise InvalidArgument(
-                "Hypothesis can't yet construct a strategy for instances of a "
-                f"Callable type parametrized by {arg!r}.  Consider using an "
-                "explicit strategy, or opening an issue."
-            )
-    if get_origin(return_type) in TypeGuardTypes:
-        raise InvalidArgument(
-            "Hypothesis cannot yet construct a strategy for callables which "
-            f"are PEP-647 TypeGuards or PEP-742 TypeIs (got {return_type!r}).  "
-            "Consider using an explicit strategy, or opening an issue."
-        )
-
-    if get_origin(thing) is collections.abc.Callable and return_type is None:
-        return_type = type(None)
-
-    return st.functions(
-        like=(lambda *a, **k: None) if args_types else (lambda: None),
-        returns=st.from_type(return_type),
-    )
+    pass
 
 
 @register(typing.TypeVar)
 @register("TypeVar", module=typing_extensions)
 def resolve_TypeVar(thing):
-    type_var_key = f"typevar={thing!r}"
-
-    bound = getattr(thing, "__bound__", None)
-    default = getattr(thing, "__default__", NoDefaults[0])
-    original_strategies = []
-
-    def resolve_strategies(typ):
-        if isinstance(typ, typing.ForwardRef):
-            # TODO: on Python 3.13 and later, we should work out what type_params
-            #       could be part of this type, and pass them in here.
-            typ = _try_import_forward_ref(thing, typ, type_params=())
-        strat = unwrap_strategies(st.from_type(typ))
-        if not isinstance(strat, OneOfStrategy):
-            original_strategies.append(strat)
-        else:
-            original_strategies.extend(strat.original_strategies)
-
-    if bound is not None:
-        resolve_strategies(bound)
-    if default not in NoDefaults:  # pragma: no cover
-        # Coverage requires 3.13 or `typing_extensions` package.
-        resolve_strategies(default)
-
-    if original_strategies:
-        # The bound / default was a union, or we resolved it as a union of subtypes,
-        # so we need to unpack the strategy to ensure consistency across uses.
-        # This incantation runs a sampled_from over the strategies inferred for
-        # each part of the union, wraps that in shared so that we only generate
-        # from one type per testcase, and flatmaps that back to instances.
-        return st.shared(
-            st.sampled_from(original_strategies), key=type_var_key
-        ).flatmap(lambda s: s)
-
-    builtin_scalar_types = [type(None), bool, int, float, str, bytes]
-    return st.shared(
-        st.sampled_from(
-            # Constraints may be None or () on various Python versions.
-            getattr(thing, "__constraints__", None)
-            or builtin_scalar_types,
-        ),
-        key=type_var_key,
-    ).flatmap(st.from_type)
+    pass
 
 
 if sys.version_info[:2] >= (3, 14):
@@ -1228,4 +1065,4 @@ if sys.version_info[:2] >= (3, 14):
 
     @register(memoryview, st.binary().map(memoryview))
     def resolve_memoryview(thing):
-        return st.from_type(thing.__args__[0]).map(memoryview)
+        pass

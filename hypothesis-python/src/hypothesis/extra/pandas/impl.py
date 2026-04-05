@@ -55,89 +55,7 @@ def infer_dtype_if_necessary(dtype, values, elements, draw):
 
 @check_function
 def elements_and_dtype(elements, dtype, source=None):
-    if source is None:
-        prefix = ""
-    else:
-        prefix = f"{source}."
-
-    if elements is not None:
-        check_strategy(elements, f"{prefix}elements")
-    else:
-        with check("dtype is not None"):
-            if dtype is None:
-                raise InvalidArgument(
-                    f"At least one of {prefix}elements or {prefix}dtype must be provided."
-                )
-
-    with check("isinstance(dtype, CategoricalDtype)"):
-        if pandas.api.types.CategoricalDtype.is_dtype(dtype):
-            raise InvalidArgument(
-                f"{prefix}dtype is categorical, which is currently unsupported"
-            )
-
-    if isinstance(dtype, type) and issubclass(dtype, IntegerDtype):
-        raise InvalidArgument(
-            f"Passed {dtype=} is a dtype class, please pass in an instance of this class."
-            "Otherwise it would be treated as dtype=object"
-        )
-
-    if isinstance(dtype, type) and np.dtype(dtype).kind == "O" and dtype is not object:
-        err_msg = f"Passed {dtype=} is not a valid Pandas dtype."
-        if issubclass(dtype, datetime):
-            err_msg += ' To generate valid datetimes, pass `dtype="datetime64[ns]"`'
-            raise InvalidArgument(err_msg)
-        elif issubclass(dtype, timedelta):
-            err_msg += ' To generate valid timedeltas, pass `dtype="timedelta64[ns]"`'
-            raise InvalidArgument(err_msg)
-        note_deprecation(
-            f"{err_msg}  We'll treat it as "
-            "dtype=object for now, but this will be an error in a future version.",
-            since="2021-12-31",
-            has_codemod=False,
-            stacklevel=1,
-        )
-
-    if isinstance(dtype, st.SearchStrategy):
-        raise InvalidArgument(
-            f"Passed {dtype=} is a strategy, but we require a concrete dtype "
-            "here.  See https://stackoverflow.com/q/74355937 for workaround patterns."
-        )
-
-    _get_subclasses = getattr(IntegerDtype, "__subclasses__", list)
-    dtype = {t.name: t() for t in _get_subclasses()}.get(dtype, dtype)
-
-    is_na_dtype = False
-    if isinstance(dtype, IntegerDtype):
-        is_na_dtype = True
-        dtype = np.dtype(dtype.name.lower())
-    elif dtype is not None:
-        dtype = try_convert(np.dtype, dtype, "dtype")
-
-    if elements is None:
-        elements = npst.from_dtype(dtype)
-        if is_na_dtype:
-            elements = st.none() | elements
-    # as an optimization, avoid converting object dtypes, which will always
-    # remain unchanged.
-    elif dtype is not None and dtype.kind != "O":
-
-        def convert_element(value):
-            if is_na_dtype and value is None:
-                return None
-
-            try:
-                return np.array([value], dtype=dtype)[0]
-            except (TypeError, ValueError, OverflowError):
-                name = f"draw({prefix}elements)"
-                raise InvalidArgument(
-                    f"Cannot convert {name}={value!r} of type "
-                    f"{type(value).__name__} to dtype {dtype.str}"
-                ) from None
-
-        elements = elements.map(convert_element)
-    assert elements is not None
-
-    return elements, dtype
+    pass
 
 
 class ValueIndexStrategy(st.SearchStrategy):
@@ -199,14 +117,7 @@ def range_indexes(
       it will default to some suitable value based on min_size.
     * name is the name of the index. If st.none(), the index will have no name.
     """
-    check_valid_size(min_size, "min_size")
-    check_valid_size(max_size, "max_size")
-    if max_size is None:
-        max_size = min([min_size + DEFAULT_MAX_SIZE, 2**63 - 1])
-    check_valid_interval(min_size, max_size, "min_size", "max_size")
-    check_strategy(name)
-
-    return st.builds(pandas.RangeIndex, st.integers(min_size, max_size), name=name)
+    pass
 
 
 @cacheable
@@ -241,16 +152,7 @@ def indexes(
     * name is a strategy for strings or ``None``, which will be passed to
       the :class:`pandas.Index` constructor.
     """
-    check_valid_size(min_size, "min_size")
-    check_valid_size(max_size, "max_size")
-    check_valid_interval(min_size, max_size, "min_size", "max_size")
-    check_type(bool, unique, "unique")
-
-    elements, dtype = elements_and_dtype(elements, dtype)
-
-    if max_size is None:
-        max_size = min_size + DEFAULT_MAX_SIZE
-    return ValueIndexStrategy(elements, dtype, min_size, max_size, unique, name)
+    pass
 
 
 @defines_strategy()
@@ -304,63 +206,7 @@ def series(
         0   -2001747478
         1    1153062837
     """
-    if index is None:
-        index = range_indexes()
-    else:
-        check_strategy(index, "index")
-
-    elements, np_dtype = elements_and_dtype(elements, dtype)
-    index_strategy = index
-
-    # if it is converted to an object, use object for series type
-    if (
-        np_dtype is not None
-        and np_dtype.kind == "O"
-        and not isinstance(dtype, IntegerDtype)
-    ):
-        dtype = np_dtype
-
-    @st.composite
-    def result(draw):
-        index = draw(index_strategy)
-
-        if len(index) > 0:
-            if dtype is not None:
-                result_data = draw(
-                    npst.arrays(
-                        dtype=object,
-                        elements=elements,
-                        shape=len(index),
-                        fill=fill,
-                        unique=unique,
-                    )
-                ).tolist()
-            else:
-                result_data = list(
-                    draw(
-                        npst.arrays(
-                            dtype=object,
-                            elements=elements,
-                            shape=len(index),
-                            fill=fill,
-                            unique=unique,
-                        )
-                    ).tolist()
-                )
-            return pandas.Series(result_data, index=index, dtype=dtype, name=draw(name))
-        else:
-            return pandas.Series(
-                (),
-                index=index,
-                dtype=(
-                    dtype
-                    if dtype is not None
-                    else draw(dtype_for_elements_strategy(elements))
-                ),
-                name=draw(name),
-            )
-
-    return result()
+    pass
 
 
 @dataclass(slots=True, frozen=False)
@@ -405,14 +251,7 @@ def columns(
     be created. All other arguments are passed through verbatim to
     create the columns.
     """
-    if isinstance(names_or_number, (int, float)):
-        names: list[int | str | None] = [None] * names_or_number
-    else:
-        names = list(names_or_number)
-    return [
-        column(name=n, dtype=dtype, elements=elements, fill=fill, unique=unique)
-        for n in names
-    ]
+    pass
 
 
 @defines_strategy()
@@ -524,238 +363,4 @@ def data_frames(
       if sequences are passed if there are too many items) will result in
       InvalidArgument being raised.
     """
-    if index is None:
-        index = range_indexes()
-    else:
-        check_strategy(index, "index")
-
-    index_strategy = index
-
-    if columns is None:
-        if rows is None:
-            raise InvalidArgument("At least one of rows and columns must be provided")
-        else:
-
-            @st.composite
-            def rows_only(draw):
-                index = draw(index_strategy)
-
-                def row():
-                    result = draw(rows)
-                    check_type(abc.Iterable, result, "draw(row)")
-                    return result
-
-                if len(index) > 0:
-                    return pandas.DataFrame([row() for _ in index], index=index)
-                else:
-                    # If we haven't drawn any rows we need to draw one row and
-                    # then discard it so that we get a consistent shape for the
-                    # DataFrame.
-                    base = pandas.DataFrame([row()])
-                    return base.drop(0)
-
-            return rows_only()
-
-    assert columns is not None
-    cols = try_convert(tuple, columns, "columns")
-
-    rewritten_columns = []
-    column_names: set[str] = set()
-
-    for i, c in enumerate(cols):
-        check_type(column, c, f"columns[{i}]")
-
-        c = copy(c)
-        if c.name is None:
-            label = f"columns[{i}]"
-            c.name = i
-        else:
-            label = c.name
-            try:
-                hash(c.name)
-            except TypeError:
-                raise InvalidArgument(
-                    f"Column names must be hashable, but columns[{i}].name was "
-                    f"{c.name!r} of type {type(c.name).__name__}, which cannot be hashed."
-                ) from None
-
-        if c.name in column_names:
-            raise InvalidArgument(f"duplicate definition of column name {c.name!r}")
-
-        column_names.add(c.name)
-        c.elements, _ = elements_and_dtype(c.elements, c.dtype, label)
-
-        if c.dtype is None and rows is not None:
-            raise InvalidArgument(
-                "Must specify a dtype for all columns when combining rows with columns."
-            )
-
-        c.fill = npst.fill_for(
-            fill=c.fill, elements=c.elements, unique=c.unique, name=label
-        )
-        rewritten_columns.append(c)
-
-    if rows is None:
-
-        @st.composite
-        def just_draw_columns(draw):
-            index = draw(index_strategy)
-            local_index_strategy = st.just(index)
-
-            data = OrderedDict((c.name, None) for c in rewritten_columns)
-
-            # Depending on how the columns are going to be generated we group
-            # them differently to get better shrinking. For columns with fill
-            # enabled, the elements can be shrunk independently of the size,
-            # so we can just shrink by shrinking the index then shrinking the
-            # length and are generally much more free to move data around.
-
-            # For columns with no filling the problem is harder, and drawing
-            # them like that would result in rows being very far apart from
-            # each other in the choice sequence, which gets in the way
-            # of shrinking. So what we do is reorder and draw those columns
-            # row wise, so that the values of each row are next to each other.
-            # This makes life easier for the shrinker when deleting choices.
-
-            columns_without_fill = [c for c in rewritten_columns if c.fill.is_empty]
-            if columns_without_fill:
-                for c in columns_without_fill:
-                    data[c.name] = pandas.Series(
-                        np.zeros(shape=len(index), dtype=object),
-                        index=index,
-                        dtype=c.dtype,
-                    )
-                seen = {c.name: set() for c in columns_without_fill if c.unique}
-
-                for i in range(len(index)):
-                    for c in columns_without_fill:
-                        if c.unique:
-                            for _ in range(5):
-                                value = draw(c.elements)
-                                if value not in seen[c.name]:
-                                    seen[c.name].add(value)
-                                    break
-                            else:
-                                reject()
-                        else:
-                            value = draw(c.elements)
-
-                        try:
-                            data[c.name].iloc[i] = value
-                        except ValueError as err:  # pragma: no cover
-                            # This just works in Pandas 1.4 and later, but gives
-                            # a confusing error on previous versions.
-                            if c.dtype is None and not isinstance(
-                                value, (float, int, str, bool, datetime, timedelta)
-                            ):
-                                raise ValueError(
-                                    f"Failed to add {value=} to column "
-                                    f"{c.name} with dtype=None.  Maybe passing "
-                                    "dtype=object would help?"
-                                ) from err
-                            # Unclear how this could happen, but users find a way...
-                            raise
-
-            for c in rewritten_columns:
-                if not c.fill.is_empty:
-                    data[c.name] = draw(
-                        series(
-                            index=local_index_strategy,
-                            dtype=c.dtype,
-                            elements=c.elements,
-                            fill=c.fill,
-                            unique=c.unique,
-                        )
-                    )
-
-            return pandas.DataFrame(data, index=index)
-
-        return just_draw_columns()
-    else:
-
-        @st.composite
-        def assign_rows(draw):
-            index = draw(index_strategy)
-
-            result = pandas.DataFrame(
-                OrderedDict(
-                    (
-                        c.name,
-                        pandas.Series(
-                            np.zeros(dtype=c.dtype, shape=len(index)), dtype=c.dtype
-                        ),
-                    )
-                    for c in rewritten_columns
-                ),
-                index=index,
-            )
-
-            fills = {}
-
-            any_unique = any(c.unique for c in rewritten_columns)
-
-            if any_unique:
-                all_seen = [set() if c.unique else None for c in rewritten_columns]
-                while all_seen[-1] is None:
-                    all_seen.pop()
-
-            for row_index in range(len(index)):
-                for _ in range(5):
-                    original_row = draw(rows)
-                    row = original_row
-                    if isinstance(row, dict):
-                        as_list = [None] * len(rewritten_columns)
-                        for i, c in enumerate(rewritten_columns):
-                            try:
-                                as_list[i] = row[c.name]
-                            except KeyError:
-                                try:
-                                    as_list[i] = fills[i]
-                                except KeyError:
-                                    if c.fill.is_empty:
-                                        raise InvalidArgument(
-                                            f"Empty fill strategy in {c!r} cannot "
-                                            f"complete row {original_row!r}"
-                                        ) from None
-                                    fills[i] = draw(c.fill)
-                                    as_list[i] = fills[i]
-                        for k in row:
-                            if k not in column_names:
-                                raise InvalidArgument(
-                                    f"Row {row!r} contains column {k!r} not in "
-                                    f"columns {[c.name for c in rewritten_columns]!r})"
-                                )
-                        row = as_list
-                    if any_unique:
-                        has_duplicate = False
-                        for seen, value in zip(all_seen, row, strict=False):
-                            if seen is None:
-                                continue
-                            if value in seen:
-                                has_duplicate = True
-                                break
-                            seen.add(value)
-                        if has_duplicate:
-                            continue
-                    row = list(try_convert(tuple, row, "draw(rows)"))
-
-                    if len(row) > len(rewritten_columns):
-                        raise InvalidArgument(
-                            f"Row {original_row!r} contains too many entries. Has "
-                            f"{len(row)} but expected at most {len(rewritten_columns)}"
-                        )
-                    while len(row) < len(rewritten_columns):
-                        c = rewritten_columns[len(row)]
-                        if c.fill.is_empty:
-                            raise InvalidArgument(
-                                f"Empty fill strategy in {c!r} cannot "
-                                f"complete row {original_row!r}"
-                            )
-                        row.append(draw(c.fill))
-                    result.iloc[row_index] = row
-                    break
-                else:
-                    reject()
-            return result
-
-        return assign_rows()
+    pass

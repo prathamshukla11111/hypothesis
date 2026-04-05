@@ -142,22 +142,7 @@ class CharactersBuilder:
     @property
     def strategy(self):
         """Returns resulting strategy that generates configured char set."""
-        # Start by getting the set of all characters allowed by the pattern
-        white_chars = self._whitelist_chars - self._blacklist_chars
-        multi_chars = {c for c in white_chars if len(c) > 1}
-        intervals = charmap.query(
-            categories=self._categories,
-            exclude_characters=self._blacklist_chars,
-            include_characters=white_chars - multi_chars,
-        )
-        # Then take the complement if this is from a negated character class
-        if self._negate:
-            intervals = charmap.query() - intervals
-            multi_chars.clear()
-        # and finally return the intersection with our alphabet
-        return OneCharStringStrategy(intervals & self._alphabet.intervals) | (
-            st.sampled_from(sorted(multi_chars)) if multi_chars else st.nothing()
-        )
+        pass
 
     def add_category(self, category):
         """Update unicode state to match sre_parse object ``category``."""
@@ -203,10 +188,7 @@ class BytesBuilder(CharactersBuilder):
     @property
     def strategy(self):
         """Returns resulting strategy that generates configured char set."""
-        allowed = self._whitelist_chars
-        if self._negate:
-            allowed = BYTES_ALL - allowed
-        return st.sampled_from(sorted(allowed))
+        pass
 
     def add_category(self, category):
         """Update characters state to match sre_parse object ``category``."""

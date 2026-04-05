@@ -48,12 +48,7 @@ def get_top_level_domains() -> tuple[str, ...]:
 
 @st.composite
 def _recase_randomly(draw: DrawFn, tld: str) -> str:
-    tld = list(tld)
-    changes = draw(st.tuples(*(st.booleans() for _ in range(len(tld)))))
-    for i, change_case in enumerate(changes):
-        if change_case:
-            tld[i] = tld[i].lower() if tld[i].isupper() else tld[i].upper()
-    return "".join(tld)
+    pass
 
 
 class DomainNameStrategy(st.SearchStrategy[str]):
@@ -188,7 +183,7 @@ def urls() -> st.SearchStrategy[str]:
     """
 
     def url_encode(s: str) -> str:
-        return "".join(c if c in URL_SAFE_CHARACTERS else f"%{ord(c):02X}" for c in s)
+        pass
 
     schemes = st.sampled_from(["http", "https"])
     ports = st.integers(min_value=1, max_value=2**16 - 1).map(":{}".format)

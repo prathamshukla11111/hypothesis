@@ -23,11 +23,11 @@ class DynamicVariable(Generic[T]):
 
     @property
     def value(self) -> T:
-        return getattr(self.data, "value", self.default)
+        pass
 
     @value.setter
     def value(self, value: T) -> None:
-        self.data.value = value
+        pass
 
     @contextmanager
     def with_value(self, value: T) -> Generator[None, None, None]:

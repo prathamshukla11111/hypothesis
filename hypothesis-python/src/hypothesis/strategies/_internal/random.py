@@ -51,14 +51,7 @@ class HypothesisRandom(Random, abc.ABC):
         raise NotImplementedError
 
     def _hypothesis_log_random(self, method, kwargs, result):
-        if not (self._note_method_calls and should_note()):
-            return
-
-        args, kwargs = convert_kwargs(method, kwargs)
-        argstr = ", ".join(
-            list(map(repr, args)) + [f"{k}={v!r}" for k, v in kwargs.items()]
-        )
-        report(f"{self!r}.{method}({argstr}) -> {result!r}")
+        pass
 
 
 RANDOM_METHODS = [
@@ -111,35 +104,11 @@ SIGNATURES: dict[str, inspect.Signature] = {}
 
 
 def sig_of(name):
-    try:
-        return SIGNATURES[name]
-    except KeyError:
-        pass
-
-    target = getattr(Random, name)
-    result = inspect.signature(STUBS.get(name, target))
-    SIGNATURES[name] = result
-    return result
+    pass
 
 
 def define_copy_method(name):
-    target = getattr(Random, name)
-
-    def implementation(self, **kwargs):
-        result = self._hypothesis_do_random(name, kwargs)
-        self._hypothesis_log_random(name, kwargs, result)
-        return result
-
-    sig = inspect.signature(STUBS.get(name, target))
-
-    result = define_function_signature(target.__name__, target.__doc__, sig)(
-        implementation
-    )
-
-    result.__module__ = __name__
-    result.__qualname__ = "HypothesisRandom." + result.__name__
-
-    setattr(HypothesisRandom, name, result)
+    pass
 
 
 for r in RANDOM_METHODS:
@@ -167,10 +136,7 @@ def state_for_seed(data, seed):
 
 
 def normalize_zero(f: float) -> float:
-    if f == 0.0:
-        return 0.0
-    else:
-        return f
+    pass
 
 
 class ArtificialRandom(HypothesisRandom):
@@ -193,143 +159,10 @@ class ArtificialRandom(HypothesisRandom):
         return result
 
     def __convert_result(self, method, kwargs, result):
-        if method == "choice":
-            return kwargs.get("seq")[result]
-        if method in ("choices", "sample"):
-            seq = kwargs["population"]
-            return [seq[i] for i in result]
-        if method == "shuffle":
-            seq = kwargs["x"]
-            original = list(seq)
-            for i, i2 in enumerate(result):
-                seq[i] = original[i2]
-            return None
-        return result
+        pass
 
     def _hypothesis_do_random(self, method, kwargs):
-        if method == "choices":
-            key = (method, len(kwargs["population"]), kwargs.get("k"))
-        elif method == "choice":
-            key = (method, len(kwargs["seq"]))
-        elif method == "shuffle":
-            key = (method, len(kwargs["x"]))
-        else:
-            key = (method, *sorted(kwargs))
-
-        try:
-            result, self.__state = self.__state.next_states[key]
-        except KeyError:
-            pass
-        else:
-            return self.__convert_result(method, kwargs, result)
-
-        if method == "_randbelow":
-            result = self.__data.draw_integer(0, kwargs["n"] - 1)
-        elif method == "random":
-            # See https://github.com/HypothesisWorks/hypothesis/issues/4297
-            # for numerics/bounds of "random" and "betavariate"
-            result = self.__data.draw(floats(0, 1, exclude_max=True))
-        elif method == "betavariate":
-            result = self.__data.draw(floats(0, 1))
-        elif method == "uniform":
-            a = normalize_zero(kwargs["a"])
-            b = normalize_zero(kwargs["b"])
-            result = self.__data.draw(floats(a, b))
-        elif method in ("weibullvariate", "gammavariate"):
-            result = self.__data.draw(floats(min_value=0.0, allow_infinity=False))
-        elif method in ("gauss", "normalvariate"):
-            mu = kwargs["mu"]
-            result = mu + self.__data.draw(
-                floats(allow_nan=False, allow_infinity=False)
-            )
-        elif method == "vonmisesvariate":
-            result = self.__data.draw(floats(0, 2 * math.pi))
-        elif method == "randrange":
-            if kwargs["stop"] is None:
-                stop = kwargs["start"]
-                start = 0
-            else:
-                start = kwargs["start"]
-                stop = kwargs["stop"]
-
-            step = kwargs["step"]
-            if start == stop:
-                raise ValueError(f"empty range for randrange({start}, {stop}, {step})")
-
-            if step != 1:
-                endpoint = (stop - start) // step
-                if (start - stop) % step == 0:
-                    endpoint -= 1
-
-                i = self.__data.draw_integer(0, endpoint)
-                result = start + i * step
-            else:
-                result = self.__data.draw_integer(start, stop - 1)
-        elif method == "randint":
-            result = self.__data.draw_integer(kwargs["a"], kwargs["b"])
-        # New in Python 3.12, so not taken by our coverage job
-        elif method == "binomialvariate":  # pragma: no cover
-            result = self.__data.draw_integer(0, kwargs["n"])
-        elif method == "choice":
-            seq = kwargs["seq"]
-            result = self.__data.draw_integer(0, len(seq) - 1)
-        elif method == "choices":
-            k = kwargs["k"]
-            result = self.__data.draw(
-                lists(
-                    integers(0, len(kwargs["population"]) - 1),
-                    min_size=k,
-                    max_size=k,
-                )
-            )
-        elif method == "sample":
-            k = kwargs["k"]
-            seq = kwargs["population"]
-
-            if k > len(seq) or k < 0:
-                raise ValueError(
-                    f"Sample size {k} not in expected range 0 <= k <= {len(seq)}"
-                )
-
-            if k == 0:
-                result = []
-            else:
-                result = self.__data.draw(
-                    lists(
-                        sampled_from(range(len(seq))),
-                        min_size=k,
-                        max_size=k,
-                        unique=True,
-                    )
-                )
-
-        elif method == "getrandbits":
-            result = self.__data.draw_integer(0, 2 ** kwargs["n"] - 1)
-        elif method == "triangular":
-            low = normalize_zero(kwargs["low"])
-            high = normalize_zero(kwargs["high"])
-            mode = normalize_zero(kwargs["mode"])
-            if mode is None:
-                result = self.__data.draw(floats(low, high))
-            elif self.__data.draw_boolean(0.5):
-                result = self.__data.draw(floats(mode, high))
-            else:
-                result = self.__data.draw(floats(low, mode))
-        elif method in ("paretovariate", "expovariate", "lognormvariate"):
-            result = self.__data.draw(floats(min_value=0.0))
-        elif method == "shuffle":
-            result = self.__data.draw(permutations(range(len(kwargs["x"]))))
-        elif method == "randbytes":
-            n = int(kwargs["n"])
-            result = self.__data.draw_bytes(min_size=n, max_size=n)
-        else:
-            raise NotImplementedError(method)
-
-        new_state = RandomState()
-        self.__state.next_states[key] = (result, new_state)
-        self.__state = new_state
-
-        return self.__convert_result(method, kwargs, result)
+        pass
 
     def seed(self, seed):
         self.__state = state_for_seed(self.__data, seed)
@@ -354,39 +187,7 @@ DUMMY_RANDOM = Random(0)
 
 
 def convert_kwargs(name, kwargs):
-    kwargs = dict(kwargs)
-
-    signature = sig_of(name)
-    params = signature.parameters
-
-    bound = signature.bind(DUMMY_RANDOM, **kwargs)
-    bound.apply_defaults()
-
-    for k in list(kwargs):
-        if (
-            kwargs[k] is params[k].default
-            or params[k].kind != inspect.Parameter.KEYWORD_ONLY
-        ):
-            kwargs.pop(k)
-
-    arg_names = list(params)[1:]
-
-    args = []
-
-    for a in arg_names:
-        if params[a].kind == inspect.Parameter.KEYWORD_ONLY:
-            break
-        args.append(bound.arguments[a])
-        kwargs.pop(a, None)
-
-    while args:
-        name = arg_names[len(args) - 1]
-        if args[-1] is params[name].default:
-            args.pop()
-        else:
-            break
-
-    return (args, kwargs)
+    pass
 
 
 class TrueRandom(HypothesisRandom):
@@ -396,13 +197,7 @@ class TrueRandom(HypothesisRandom):
         self.__random = Random(seed)
 
     def _hypothesis_do_random(self, method, kwargs):
-        fn = getattr(self.__random, method)
-        try:
-            return fn(**kwargs)
-        except TypeError:
-            pass
-        args, kwargs = convert_kwargs(method, kwargs)
-        return fn(*args, **kwargs)
+        pass
 
     def __copy__(self) -> "TrueRandom":
         result = TrueRandom(

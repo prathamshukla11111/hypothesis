@@ -341,11 +341,7 @@ class RepresentationPrinter:
     @contextmanager
     def indent(self, indent: int) -> Generator[None, None, None]:
         """`with`-statement support for indenting/dedenting."""
-        self.indentation += indent
-        try:
-            yield
-        finally:
-            self.indentation -= indent
+        pass
 
     @contextmanager
     def group(
@@ -607,27 +603,7 @@ def _seq_pprinter_factory(start: str, end: str, basetype: type) -> PrettyPrintFu
     def inner(
         obj: tuple[object] | list[object], p: RepresentationPrinter, cycle: bool
     ) -> None:
-        typ = type(obj)
-        if (
-            basetype is not None
-            and typ is not basetype
-            and typ.__repr__ != basetype.__repr__  # type: ignore[comparison-overlap]
-        ):
-            # If the subclass provides its own repr, use it instead.
-            return p.text(typ.__repr__(obj))
-
-        if cycle:
-            return p.text(start + "..." + end)
-        step = len(start)
-        with p.group(step, start, end):
-            for idx, x in p._enumerate(obj):
-                if idx:
-                    p.text(",")
-                    p.breakable()
-                p.pretty(x)
-            if len(obj) == 1 and type(obj) is tuple:
-                # Special case for 1-item tuples.
-                p.text(",")
+        pass
 
     return inner
 
@@ -649,36 +625,7 @@ def _set_pprinter_factory(
         p: RepresentationPrinter,
         cycle: bool,
     ) -> None:
-        typ = type(obj)
-        if (
-            basetype is not None
-            and typ is not basetype
-            and typ.__repr__ != basetype.__repr__
-        ):
-            # If the subclass provides its own repr, use it instead.
-            return p.text(typ.__repr__(obj))
-
-        if cycle:
-            return p.text(start + "..." + end)
-        if not obj:
-            # Special case.
-            p.text(get_class_name(basetype) + "()")
-        else:
-            step = len(start)
-            with p.group(step, start, end):
-                # Like dictionary keys, try to sort the items if there aren't too many
-                items: Iterable[object] = obj
-                if not (p.max_seq_length and len(obj) >= p.max_seq_length):
-                    try:
-                        items = sorted(obj)
-                    except Exception:
-                        # Sometimes the items don't sort.
-                        pass
-                for idx, x in p._enumerate(items):
-                    if idx:
-                        p.text(",")
-                        p.breakable()
-                    p.pretty(x)
+        pass
 
     return inner
 
@@ -690,32 +637,7 @@ def _dict_pprinter_factory(
     dicts and dict proxies."""
 
     def inner(obj: dict[object, object], p: RepresentationPrinter, cycle: bool) -> None:
-        typ = type(obj)
-        if (
-            basetype is not None
-            and typ is not basetype
-            and typ.__repr__ != basetype.__repr__
-        ):
-            # If the subclass provides its own repr, use it instead.
-            return p.text(typ.__repr__(obj))
-
-        if cycle:
-            return p.text("{...}")
-        with (
-            p.group(1, start, end),
-            # If the dict contains both "" and b"" (empty string and empty bytes), we
-            # ignore the BytesWarning raised by `python -bb` mode.  We can't use
-            # `.items()` because it might be a non-`dict` type of mapping.
-            warnings.catch_warnings(),
-        ):
-            warnings.simplefilter("ignore", BytesWarning)
-            for idx, key in p._enumerate(obj):
-                if idx:
-                    p.text(",")
-                    p.breakable()
-                p.pretty(key)
-                p.text(": ")
-                p.pretty(obj[key])
+        pass
 
     inner.__name__ = f"_dict_pprinter_factory({start!r}, {end!r}, {basetype!r})"
     return inner
@@ -723,69 +645,17 @@ def _dict_pprinter_factory(
 
 def _super_pprint(obj: Any, p: RepresentationPrinter, cycle: bool) -> None:
     """The pprint for the super type."""
-    with p.group(8, "<super: ", ">"):
-        p.pretty(obj.__thisclass__)
-        p.text(",")
-        p.breakable()
-        p.pretty(obj.__self__)
+    pass
 
 
 def _re_pattern_pprint(obj: re.Pattern, p: RepresentationPrinter, cycle: bool) -> None:
     """The pprint function for regular expression patterns."""
-    p.text("re.compile(")
-    pattern = repr(obj.pattern)
-    if pattern[:1] in "uU":  # pragma: no cover
-        pattern = pattern[1:]
-        prefix = "ur"
-    else:
-        prefix = "r"
-    pattern = prefix + pattern.replace("\\\\", "\\")
-    p.text(pattern)
-    if obj.flags:
-        p.text(",")
-        p.breakable()
-        done_one = False
-        for flag in (
-            "TEMPLATE",
-            "IGNORECASE",
-            "LOCALE",
-            "MULTILINE",
-            "DOTALL",
-            "UNICODE",
-            "VERBOSE",
-            "DEBUG",
-        ):
-            if obj.flags & getattr(re, flag, 0):
-                if done_one:
-                    p.text("|")
-                p.text("re." + flag)
-                done_one = True
-    p.text(")")
+    pass
 
 
 def _type_pprint(obj: type[object], p: RepresentationPrinter, cycle: bool) -> None:
     """The pprint for classes and types."""
-    # Heap allocated types might not have the module attribute,
-    # and others may set it to None.
-
-    # Checks for a __repr__ override in the metaclass
-    # != rather than is not because pypy compatibility
-    if type(obj).__repr__ != type.__repr__:  # type: ignore[comparison-overlap]
-        _repr_pprint(obj, p, cycle)
-        return
-
-    mod = _safe_getattr(obj, "__module__", None)
-    try:
-        name = obj.__qualname__
-    except Exception:  # pragma: no cover
-        name = obj.__name__
-        if not isinstance(name, str):
-            name = "<unknown type>"
-
-    if mod in (None, "__builtin__", "builtins", "exceptions"):
-        p.text(name)
-    else:
-        p.text(mod + "." + name)
+    pass
 
 
 def _repr_pprint(obj: object, p: RepresentationPrinter, cycle: bool) -> None:
@@ -830,24 +700,7 @@ def _tuple_pprinter(arg_labels: ArgLabelsT) -> PrettyPrintFunction:
     """Pretty printer for tuples that shows sub-argument comments."""
 
     def inner(obj: tuple, p: RepresentationPrinter, cycle: bool) -> None:
-        if cycle:
-            return p.text("(...)")
-
-        get = lambda i: _get_slice_comment(p, arg_labels, f"arg[{i}]")
-        has_comments = any(get(i) for i in range(len(obj)))
-
-        with p.group(indent=4, open="(", close=""):
-            for idx, x in p._enumerate(obj):
-                p.break_() if has_comments else (p.breakable() if idx else None)
-                p.pretty(x)
-                if has_comments or idx + 1 < len(obj) or len(obj) == 1:
-                    p.text(",")
-                if entry := get(idx):
-                    p._commented_slices.add(entry[1])
-                    p.text(f"  # {entry[0]}")
-        if has_comments and obj:
-            p.break_()
-        p.text(")")
+        pass
 
     return inner
 
@@ -859,28 +712,7 @@ def _fixeddict_pprinter(
     """Pretty printer for fixed_dictionaries that shows sub-argument comments."""
 
     def inner(obj: dict, p: RepresentationPrinter, cycle: bool) -> None:
-        if cycle:
-            return p.text("{...}")
-
-        get = lambda k: _get_slice_comment(p, arg_labels, k)
-        # Preserve mapping key order, then any optional keys (deduped)
-        keys = list(dict.fromkeys(k for k in [*mapping, *obj] if k in obj))
-        has_comments = any(get(k) for k in keys)
-
-        with p.group(indent=4, open="{", close=""):
-            for idx, key in p._enumerate(keys):
-                p.break_() if has_comments else (p.breakable() if idx else None)
-                p.pretty(key)
-                p.text(": ")
-                p.pretty(obj[key])
-                if has_comments or idx + 1 < len(keys):
-                    p.text(",")
-                if entry := get(key):
-                    p._commented_slices.add(entry[1])
-                    p.text(f"  # {entry[0]}")
-        if has_comments and obj:
-            p.break_()
-        p.text("}")
+        pass
 
     return inner
 
@@ -891,49 +723,24 @@ def _function_pprint(
     cycle: bool,
 ) -> None:
     """Base pprint for all functions and builtin functions."""
-    from hypothesis.internal.reflection import get_pretty_function_description
-
-    p.text(get_pretty_function_description(obj))
+    pass
 
 
 def _exception_pprint(
     obj: BaseException, p: RepresentationPrinter, cycle: bool
 ) -> None:
     """Base pprint for all exceptions."""
-    name = getattr(obj.__class__, "__qualname__", obj.__class__.__name__)
-    if obj.__class__.__module__ not in ("exceptions", "builtins"):
-        name = f"{obj.__class__.__module__}.{name}"
-    step = len(name) + 1
-    with p.group(step, name + "(", ")"):
-        for idx, arg in enumerate(getattr(obj, "args", ())):
-            if idx:
-                p.text(",")
-                p.breakable()
-            p.pretty(arg)
+    pass
 
 
 def _repr_integer(obj: int, p: RepresentationPrinter, cycle: bool) -> None:
-    if abs(obj) < 1_000_000_000:
-        p.text(repr(obj))
-    elif abs(obj) < 10**640:
-        # add underscores for integers over ten decimal digits
-        p.text(f"{obj:#_d}")
-    else:
-        # for very very large integers, use hex because power-of-two bases are cheaper
-        # https://docs.python.org/3/library/stdtypes.html#integer-string-conversion-length-limitation
-        p.text(f"{obj:#_x}")
+    pass
 
 
 def _repr_float_counting_nans(
     obj: float, p: RepresentationPrinter, cycle: bool
 ) -> None:
-    if isnan(obj):
-        if struct.pack("!d", abs(obj)) != struct.pack("!d", float("nan")):
-            show = hex(*struct.unpack("Q", struct.pack("d", obj)))
-            return p.text(f"struct.unpack('d', struct.pack('Q', {show}))[0]")
-        elif copysign(1.0, obj) == -1.0:
-            return p.text("-nan")
-    p.text(repr(obj))
+    pass
 
 
 #: printers for builtin types
@@ -984,66 +791,33 @@ _singleton_pprinters: dict[int, PrettyPrintFunction] = dict.fromkeys(
 def _defaultdict_pprint(
     obj: defaultdict[object, object], p: RepresentationPrinter, cycle: bool
 ) -> None:
-    name = obj.__class__.__name__
-    with p.group(len(name) + 1, name + "(", ")"):
-        if cycle:
-            p.text("...")
-        else:
-            p.pretty(obj.default_factory)
-            p.text(",")
-            p.breakable()
-            p.pretty(dict(obj))
+    pass
 
 
 def _ordereddict_pprint(
     obj: OrderedDict[object, object], p: RepresentationPrinter, cycle: bool
 ) -> None:
-    name = obj.__class__.__name__
-    with p.group(len(name) + 1, name + "(", ")"):
-        if cycle:
-            p.text("...")
-        elif obj:
-            p.pretty(list(obj.items()))
+    pass
 
 
 def _deque_pprint(obj: deque[object], p: RepresentationPrinter, cycle: bool) -> None:
-    name = obj.__class__.__name__
-    with p.group(len(name) + 1, name + "(", ")"):
-        if cycle:
-            p.text("...")
-        else:
-            p.pretty(list(obj))
+    pass
 
 
 def _counter_pprint(
     obj: Counter[object], p: RepresentationPrinter, cycle: bool
 ) -> None:
-    name = obj.__class__.__name__
-    with p.group(len(name) + 1, name + "(", ")"):
-        if cycle:
-            p.text("...")
-        elif obj:
-            p.pretty(dict(obj))
+    pass
 
 
 def _repr_dataframe(
     obj: object, p: RepresentationPrinter, cycle: bool
 ) -> None:  # pragma: no cover
-    with p.indent(4):
-        p.break_()
-        _repr_pprint(obj, p, cycle)
-    p.break_()
+    pass
 
 
 def _repr_enum(obj: Enum, p: RepresentationPrinter, cycle: bool) -> None:
-    tname = get_class_name(type(obj))
-    if isinstance(obj, Flag):
-        p.text(
-            " | ".join(f"{tname}.{x.name}" for x in type(obj) if x & obj == x)
-            or f"{tname}({obj.value!r})"  # if no matching members
-        )
-    else:
-        p.text(f"{tname}.{obj.name}")
+    pass
 
 
 class _ReprDots:
@@ -1052,10 +826,7 @@ class _ReprDots:
 
 
 def _repr_partial(obj: partial[Any], p: RepresentationPrinter, cycle: bool) -> None:
-    args, kw = obj.args, obj.keywords
-    if cycle:
-        args, kw = (_ReprDots(),), {}
-    p.repr_call(pretty(type(obj)), (obj.func, *args), kw)
+    pass
 
 
 for_type_by_name("collections", "defaultdict", _defaultdict_pprint)

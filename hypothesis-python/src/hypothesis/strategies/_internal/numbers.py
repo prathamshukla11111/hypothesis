@@ -86,25 +86,7 @@ class IntegersStrategy(SearchStrategy[int]):
         )
 
     def filter(self, condition):
-        if condition is math.isfinite:
-            return self
-        if condition in [math.isinf, math.isnan]:
-            return nothing()
-        constraints, pred = get_integer_predicate_bounds(condition)
-
-        start, end = self.start, self.end
-        if "min_value" in constraints:
-            start = max(constraints["min_value"], -math.inf if start is None else start)
-        if "max_value" in constraints:
-            end = min(constraints["max_value"], math.inf if end is None else end)
-
-        if start != self.start or end != self.end:
-            if start is not None and end is not None and start > end:
-                return nothing()
-            self = type(self)(start, end)
-        if pred is None:
-            return self
-        return super().filter(pred)
+        pass
 
 
 @cacheable
@@ -191,58 +173,7 @@ class FloatStrategy(SearchStrategy[float]):
 
     def filter(self, condition):
         # Handle a few specific weird cases.
-        if condition is math.isfinite:
-            return FloatStrategy(
-                min_value=max(self.min_value, next_up(float("-inf"))),
-                max_value=min(self.max_value, next_down(float("inf"))),
-                allow_nan=False,
-                smallest_nonzero_magnitude=self.smallest_nonzero_magnitude,
-            )
-        if condition is math.isinf:
-            if permitted_infs := [
-                x
-                for x in (-math.inf, math.inf)
-                if self.min_value <= x <= self.max_value
-            ]:
-                return SampledFromStrategy(permitted_infs)
-            return nothing()
-        if condition is math.isnan:
-            if not self.allow_nan:
-                return nothing()
-            return NanStrategy()
-
-        constraints, pred = get_float_predicate_bounds(condition)
-        if not constraints:
-            return super().filter(pred)
-        min_bound = max(constraints.get("min_value", -math.inf), self.min_value)
-        max_bound = min(constraints.get("max_value", math.inf), self.max_value)
-
-        # Adjustments for allow_subnormal=False, if any need to be made
-        if -self.smallest_nonzero_magnitude < min_bound < 0:
-            min_bound = -0.0
-        elif 0 < min_bound < self.smallest_nonzero_magnitude:
-            min_bound = self.smallest_nonzero_magnitude
-        if -self.smallest_nonzero_magnitude < max_bound < 0:
-            max_bound = -self.smallest_nonzero_magnitude
-        elif 0 < max_bound < self.smallest_nonzero_magnitude:
-            max_bound = 0.0
-
-        if min_bound > max_bound:
-            return nothing()
-        if (
-            min_bound > self.min_value
-            or self.max_value > max_bound
-            or (self.allow_nan and (-math.inf < min_bound or max_bound < math.inf))
-        ):
-            self = type(self)(
-                min_value=min_bound,
-                max_value=max_bound,
-                allow_nan=False,
-                smallest_nonzero_magnitude=self.smallest_nonzero_magnitude,
-            )
-        if pred is None:
-            return self
-        return super().filter(pred)
+        pass
 
 
 @cacheable
@@ -507,10 +438,7 @@ def floats(
     if width < 64:
 
         def downcast(x: float) -> float:
-            try:
-                return float_of(x, width)
-            except OverflowError:  # pragma: no cover
-                reject()
+            pass
 
         result = result.map(downcast)
     return result

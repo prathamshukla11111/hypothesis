@@ -59,8 +59,7 @@ except ImportError:
 
     def main():
         """If `click` is not installed, tell the user to install it then exit."""
-        sys.stderr.write(MESSAGE.format("click"))
-        sys.exit(1)
+        pass
 
 else:
     # Ensure that Python scripts in the current working directory are importable,
@@ -76,108 +75,10 @@ else:
 
     def obj_name(s: str) -> object:
         """This "type" imports whatever object is named by a dotted string."""
-        s = s.strip()
-        if "/" in s or "\\" in s:
-            raise click.UsageError(
-                "Remember that the ghostwriter should be passed the name of a module, not a path."
-            ) from None
-        try:
-            return importlib.import_module(s)
-        except ImportError:
-            pass
-        classname = None
-        if "." not in s:
-            modulename, module, funcname = "builtins", builtins, s
-        else:
-            modulename, funcname = s.rsplit(".", 1)
-            try:
-                module = importlib.import_module(modulename)
-            except ImportError as err:
-                try:
-                    modulename, classname = modulename.rsplit(".", 1)
-                    module = importlib.import_module(modulename)
-                except (ImportError, ValueError):
-                    if s.endswith(".py"):
-                        raise click.UsageError(
-                            "Remember that the ghostwriter should be passed the name of a module, not a file."
-                        ) from None
-                    raise click.UsageError(
-                        f"Failed to import the {modulename} module for introspection.  "
-                        "Check spelling and your Python import path, or use the Python API?"
-                    ) from err
-
-        def describe_close_matches(
-            module_or_class: types.ModuleType, objname: str
-        ) -> str:
-            public_names = [
-                name for name in vars(module_or_class) if not name.startswith("_")
-            ]
-            matches = get_close_matches(objname, public_names)
-            if matches:
-                return f"  Closest matches: {matches!r}"
-            else:
-                return ""
-
-        if classname is None:
-            try:
-                return getattr(module, funcname)
-            except AttributeError as err:
-                if funcname == "py":
-                    # Likely attempted to pass a local file (Eg., "myscript.py") instead of a module name
-                    raise click.UsageError(
-                        "Remember that the ghostwriter should be passed the name of a module, not a file."
-                        f"\n\tTry: hypothesis write {s[:-3]}"
-                    ) from None
-                raise click.UsageError(
-                    f"Found the {modulename!r} module, but it doesn't have a "
-                    f"{funcname!r} attribute."
-                    + describe_close_matches(module, funcname)
-                ) from err
-        else:
-            try:
-                func_class = getattr(module, classname)
-            except AttributeError as err:
-                raise click.UsageError(
-                    f"Found the {modulename!r} module, but it doesn't have a "
-                    f"{classname!r} class." + describe_close_matches(module, classname)
-                ) from err
-            try:
-                return getattr(func_class, funcname)
-            except AttributeError as err:
-                if inspect.isclass(func_class):
-                    func_class_is = "class"
-                else:
-                    func_class_is = "attribute"
-                raise click.UsageError(
-                    f"Found the {modulename!r} module and {classname!r} {func_class_is}, "
-                    f"but it doesn't have a {funcname!r} attribute."
-                    + describe_close_matches(func_class, funcname)
-                ) from err
+        pass
 
     def _refactor(func, fname):
-        try:
-            oldcode = Path(fname).read_text(encoding="utf-8")
-        except (OSError, UnicodeError) as err:
-            # Permissions or encoding issue, or file deleted, etc.
-            return f"skipping {fname!r} due to {err}"
-
-        if "hypothesis" not in oldcode:
-            return  # This is a fast way to avoid running slow no-op codemods
-
-        try:
-            newcode = func(oldcode)
-        except Exception as err:
-            from libcst import ParserSyntaxError
-
-            if isinstance(err, ParserSyntaxError):
-                from hypothesis.extra._patching import indent
-
-                msg = indent(str(err).replace("\n\n", "\n"), "    ").strip()
-                return f"skipping {fname!r} due to {msg}"
-            raise
-
-        if newcode != oldcode:
-            Path(fname).write_text(newcode, encoding="utf-8")
+        pass
 
     @main.command()  # type: ignore  # Click adds the .command attribute
     @click.argument("path", type=str, required=True, nargs=-1)
@@ -191,43 +92,7 @@ else:
         PATH is the file(s) or directories of files to format in place, or
         "-" to read from stdin and write to stdout.
         """
-        try:
-            from libcst.codemod import gather_files
-
-            from hypothesis.extra import codemods
-        except ImportError:
-            sys.stderr.write(
-                "You are missing required dependencies for this option.  Run:\n\n"
-                "    python -m pip install --upgrade hypothesis[codemods]\n\n"
-                "and try again."
-            )
-            sys.exit(1)
-
-        # Special case for stdin/stdout usage
-        if "-" in path:
-            if len(path) > 1:
-                raise Exception(
-                    "Cannot specify multiple paths when reading from stdin!"
-                )
-            print("Codemodding from stdin", file=sys.stderr)
-            print(codemods.refactor(sys.stdin.read()))
-            return 0
-
-        # Find all the files to refactor, and then codemod them
-        files = gather_files(path)
-        errors = set()
-        if len(files) <= 1:
-            errors.add(_refactor(codemods.refactor, *files))
-        else:
-            with Pool() as pool:
-                for msg in pool.imap_unordered(
-                    partial(_refactor, codemods.refactor), files
-                ):
-                    errors.add(msg)
-        errors.discard(None)
-        for msg in errors:
-            print(msg, file=sys.stderr)
-        return 1 if errors else 0
+        pass
 
     @main.command()  # type: ignore  # Click adds the .command attribute
     @click.argument("func", type=obj_name, required=True, nargs=-1)

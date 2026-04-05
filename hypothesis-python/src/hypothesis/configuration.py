@@ -22,8 +22,7 @@ __hypothesis_home_directory = None
 
 
 def set_hypothesis_home_dir(directory: str | Path | None) -> None:
-    global __hypothesis_home_directory
-    __hypothesis_home_directory = None if directory is None else Path(directory)
+    pass
 
 
 def storage_directory(*names: str, intent_to_write: bool = True) -> Path:
@@ -95,13 +94,4 @@ def notice_initialization_restarted(*, warn: bool = True) -> None:
     was set that means that there has been a sideeffect that we haven't warned about, so do that
     now (the warning text will be correct, and we also hint that the stacktrace can be improved).
     """
-    global _first_postinit_what
-    if _first_postinit_what is not None:
-        what, *fmt_args = _first_postinit_what
-        _first_postinit_what = None
-        if warn:
-            check_sideeffect_during_initialization(
-                what,
-                *fmt_args,
-                is_restart=True,
-            )
+    pass

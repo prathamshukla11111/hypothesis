@@ -280,77 +280,12 @@ _sys_modules_len: int | None = None
 
 
 def _get_local_constants() -> Constants:
-    global _sys_modules_len, _local_constants
-
-    if sys.platform == "emscripten":  # pragma: no cover
-        # pyodide builds bundle the stdlib in a nonstandard location, like
-        # `/lib/python312.zip/heapq.py`. To avoid identifying the entirety of
-        # the stdlib as local code and slowing down on emscripten, instead return
-        # that nothing is local.
-        #
-        # pyodide may provide some way to distinguish stdlib/third-party/local
-        # code. I haven't looked into it. If they do, we should correctly implement
-        # ModuleLocation for pyodide instead of this.
-        return _local_constants
-
-    count_constants = len(_local_constants)
-    # We call this function once per HypothesisProvider instance, i.e. once per
-    # input, so it needs to be performant. The logic here is more complicated
-    # than necessary because of this.
-    #
-    # First, we check whether there are any new modules with a very cheap length
-    # check. This check can be fooled if a module is added while another module is
-    # removed, but the more correct check against tuple(sys.modules.keys()) is
-    # substantially more expensive. Such a new module would eventually be discovered
-    # if / when the length changes again in the future.
-    #
-    # If the length has changed, we find just modules we haven't seen before. Of
-    # those, we find the ones which correspond to local modules, and extract their
-    # constants.
-
-    # careful: store sys.modules length when we first check to avoid race conditions
-    # with other threads loading a module before we set _sys_modules_len.
-    if (sys_modules_len := len(sys.modules)) != _sys_modules_len:
-        new_modules = []
-        for name, module in list(sys.modules.items()):
-            try:
-                seen = module in _seen_modules
-            except TypeError:
-                # unhashable module (e.g. SimpleNamespace); fall back to name
-                seen = name in _seen_modules
-            if not seen:
-                new_modules.append((name, module))
-        # Repeated SortedSet unions are expensive. Do the initial unions on a
-        # set(), then do a one-time union with _local_constants after.
-        new_constants = Constants()
-        for name, module in new_modules:
-            if (
-                module_file := getattr(module, "__file__", None)
-            ) is not None and is_local_module_file(module_file):
-                new_constants |= constants_from_module(module)
-            try:
-                _seen_modules.add(module)
-            except TypeError:
-                _seen_modules.add(name)
-        _local_constants |= new_constants
-        _sys_modules_len = sys_modules_len
-
-    # if we add any new constant, invalidate the constant cache for permitted values.
-    # A more efficient approach would be invalidating just the keys with this
-    # choice_type.
-    if len(_local_constants) > count_constants:
-        CONSTANTS_CACHE.cache.clear()
-
-    return _local_constants
+    pass
 
 
 @contextmanager
 def with_register_backend(name, provider_cls):
-    try:
-        AVAILABLE_PROVIDERS[name] = provider_cls
-        yield
-    finally:
-        del AVAILABLE_PROVIDERS[name]
+    pass
 
 
 class _BackendInfoMsg(TypedDict):
@@ -589,7 +524,7 @@ class PrimitiveProvider(abc.ABC):
         of high-code-coverage inputs discovered by
         `HypoFuzz <https://hypofuzz.com/>`_.
         """
-        return None
+        pass
 
     def observe_test_case(self) -> dict[str, Any]:
         """Called at the end of the test case when :ref:`observability
@@ -728,7 +663,7 @@ class HypothesisProvider(PrimitiveProvider):
     @cached_property
     def _local_constants(self):
         # defer computation of local constants until/if we need it
-        return _get_local_constants()
+        pass
 
     def _maybe_draw_constant(
         self,

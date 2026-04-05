@@ -167,9 +167,7 @@ class IntList(Sequence[int]):
             self.append(n)
 
     def __upgrade(self) -> None:
-        assert isinstance(self.__underlying, array.array)
-        code = self.NEXT_ARRAY_CODE[self.__underlying.typecode]
-        self.__underlying = self._array_or_list(code, self.__underlying)
+        pass
 
 
 def binary_search(lo: int, hi: int, f: Callable[[int], bool]) -> int:
@@ -178,16 +176,7 @@ def binary_search(lo: int, hi: int, f: Callable[[int], bool]) -> int:
     It is implicitly assumed and will not be checked
     that f(hi) != f(lo).
     """
-
-    reference = f(lo)
-
-    while lo + 1 < hi:
-        mid = (lo + hi) // 2
-        if f(mid) == reference:
-            lo = mid
-        else:
-            hi = mid
-    return lo
+    pass
 
 
 class LazySequenceCopy(Generic[T]):
@@ -463,23 +452,7 @@ def gc_cumulative_time() -> float:
             def gc_callback(
                 phase: Literal["start", "stop"], info: dict[str, int]
             ) -> None:
-                global _gc_start, _gc_cumulative_time
-                try:
-                    now = _perf_counter()
-                    if phase == "start":
-                        _gc_start = now
-                    elif phase == "stop" and _gc_start > 0:
-                        _gc_cumulative_time += now - _gc_start  # pragma: no cover # ??
-                except RecursionError:  # pragma: no cover
-                    # Avoid flakiness via UnraisableException, which is caught and
-                    # warned by pytest. The actual callback (this function) is
-                    # validated to never trigger a RecursionError itself when
-                    # when called by gc.collect.
-                    # Anyway, we should hit the same error on "start"
-                    # and "stop", but to ensure we don't get out of sync we just
-                    # signal that there is no matching start.
-                    _gc_start = 0
-                    return
+                pass
 
             gc.callbacks.insert(0, gc_callback)
         elif hasattr(gc, "hooks"):  # pragma: no cover  # pypy only

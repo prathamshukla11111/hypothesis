@@ -34,51 +34,15 @@ _STRATEGY_CACHE = LRUReusedCache[StrategyCacheKey, object](1024)
 
 
 def _value_key(value: object) -> ValueKey:
-    if isinstance(value, float):
-        return (float, float_to_int(value))
-    return (type(value), value)
+    pass
 
 
 def clear_strategy_cache() -> None:
-    _STRATEGY_CACHE.clear()
+    pass
 
 
 def cacheable(fn: T) -> T:
-    from hypothesis.control import _current_build_context
-    from hypothesis.strategies._internal.strategies import SearchStrategy
-
-    @proxies(fn)
-    def cached_strategy(*args, **kwargs):
-        context = _current_build_context.value
-        if context is not None and context.data.provider.avoid_realization:
-            return fn(*args, **kwargs)
-
-        try:
-            kwargs_cache_key = {(k, _value_key(v)) for k, v in kwargs.items()}
-        except TypeError:
-            return fn(*args, **kwargs)
-
-        cache_key = (
-            fn,
-            tuple(_value_key(v) for v in args),
-            frozenset(kwargs_cache_key),
-        )
-        try:
-            return _STRATEGY_CACHE[cache_key]
-        except KeyError:
-            pass
-        except TypeError:
-            return fn(*args, **kwargs)
-
-        result = fn(*args, **kwargs)
-        if not isinstance(result, SearchStrategy) or result.is_cacheable:
-            _STRATEGY_CACHE[cache_key] = result
-        return result
-
-    # note that calling this clears the full _STRATEGY_CACHE for all strategies,
-    # not just the cache for this strategy.
-    cached_strategy.__clear_cache = clear_strategy_cache  # type: ignore
-    return cached_strategy
+    pass
 
 
 def defines_strategy(
@@ -123,35 +87,7 @@ def defines_strategy(
         )
 
     def decorator(strategy_definition):
-        _all_strategies[strategy_definition.__name__] = strategy_definition
-
-        if eager is True:
-            return strategy_definition
-
-        @proxies(strategy_definition)
-        def accept(*args, **kwargs):
-            from hypothesis.strategies._internal.lazy import LazyStrategy
-
-            if eager == "try":
-                # Why not try this unconditionally?  Because we'd end up with very
-                # deep nesting of recursive strategies - better to be lazy unless we
-                # *know* that eager evaluation is the right choice.
-                try:
-                    return strategy_definition(*args, **kwargs)
-                except Exception:
-                    # If invoking the strategy definition raises an exception,
-                    # wrap that up in a LazyStrategy so it happens again later.
-                    pass
-            result = LazyStrategy(strategy_definition, args, kwargs)
-            if force_reusable_values:
-                # Setting `force_has_reusable_values` here causes the recursive
-                # property code to set `.has_reusable_values == True`.
-                result.force_has_reusable_values = True
-                assert result.has_reusable_values
-            return result
-
-        accept.is_hypothesis_strategy_function = True
-        return accept
+        pass
 
     return decorator
 

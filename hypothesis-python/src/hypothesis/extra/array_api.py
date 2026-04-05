@@ -726,7 +726,7 @@ def _complex_dtypes(
 
 @proxies(_valid_tuple_axes)
 def valid_tuple_axes(*args, **kwargs):
-    return _valid_tuple_axes(*args, **kwargs)
+    pass
 
 
 valid_tuple_axes.__doc__ = f"""
@@ -748,14 +748,7 @@ def mutually_broadcastable_shapes(
     min_side: int = 1,
     max_side: int | None = None,
 ) -> st.SearchStrategy[BroadcastableShapes]:
-    return _mutually_broadcastable_shapes(
-        num_shapes=num_shapes,
-        base_shape=base_shape,
-        min_dims=min_dims,
-        max_dims=max_dims,
-        min_side=min_side,
-        max_side=max_side,
-    )
+    pass
 
 
 mutually_broadcastable_shapes.__doc__ = _mutually_broadcastable_shapes.__doc__
@@ -790,49 +783,7 @@ def indices(
     * ``allow_ellipsis`` specifies whether ``None`` is allowed in the index.
     * ``allow_ellipsis`` specifies whether ``...`` is allowed in the index.
     """
-    check_type(tuple, shape, "shape")
-    check_argument(
-        all(isinstance(x, int) and x >= 0 for x in shape),
-        f"{shape=}, but all dimensions must be non-negative integers.",
-    )
-    check_type(bool, allow_newaxis, "allow_newaxis")
-    check_type(bool, allow_ellipsis, "allow_ellipsis")
-    check_type(int, min_dims, "min_dims")
-    if not allow_newaxis:
-        check_argument(
-            min_dims <= len(shape),
-            f"min_dims={min_dims} is larger than len(shape)={len(shape)}, "
-            "but it is impossible for an indexing operation to add dimensions ",
-            "when allow_newaxis=False.",
-        )
-    check_valid_dims(min_dims, "min_dims")
-
-    if max_dims is None:
-        if allow_newaxis:
-            max_dims = min(max(len(shape), min_dims) + 2, NDIM_MAX)
-        else:
-            max_dims = min(len(shape), NDIM_MAX)
-    check_type(int, max_dims, "max_dims")
-    assert isinstance(max_dims, int)
-    if not allow_newaxis:
-        check_argument(
-            max_dims <= len(shape),
-            f"max_dims={max_dims} is larger than len(shape)={len(shape)}, "
-            "but it is impossible for an indexing operation to add dimensions ",
-            "when allow_newaxis=False.",
-        )
-    check_valid_dims(max_dims, "max_dims")
-
-    order_check("dims", 0, min_dims, max_dims)
-
-    return BasicIndexStrategy(
-        shape,
-        min_dims=min_dims,
-        max_dims=max_dims,
-        allow_ellipsis=allow_ellipsis,
-        allow_newaxis=allow_newaxis,
-        allow_fewer_indices_than_dims=False,
-    )
+    pass
 
 
 # Cache for make_strategies_namespace()
@@ -871,200 +822,7 @@ def make_strategies_namespace(
       True
 
     """
-    not_available_msg = (
-        "If the standard version you want is not available, please ensure "
-        "you're using the latest version of Hypothesis, then open an issue if "
-        "one doesn't already exist."
-    )
-    if api_version is None:
-        check_argument(
-            hasattr(xp, "__array_api_version__"),
-            f"Array module {xp.__name__} has no attribute __array_api_version__, "
-            "which is required when inferring api_version. If you believe "
-            f"{xp.__name__} is indeed an Array API module, try explicitly "
-            "passing an api_version.",
-        )
-        check_argument(
-            isinstance(xp.__array_api_version__, str)
-            and xp.__array_api_version__ in RELEASED_VERSIONS,
-            f"{xp.__array_api_version__=}, but it must "
-            f"be a valid version string {RELEASED_VERSIONS}. {not_available_msg}",
-        )
-        api_version = xp.__array_api_version__
-        inferred_version = True
-    else:
-        check_argument(
-            isinstance(api_version, str) and api_version in NOMINAL_VERSIONS,
-            f"{api_version=}, but it must be None, or a valid version "
-            f"string in {RELEASED_VERSIONS}. {not_available_msg}",
-        )
-        inferred_version = False
-    try:
-        array = xp.zeros(1)
-        array.__array_namespace__()
-    except Exception:
-        warn(
-            f"Could not determine whether module {xp.__name__} is an Array API library",
-            HypothesisWarning,
-            stacklevel=2,
-        )
-
-    try:
-        namespace = _args_to_xps[(xp, api_version)]
-    except (KeyError, TypeError):
-        pass
-    else:
-        return namespace
-
-    @defines_strategy(force_reusable_values=True)
-    def from_dtype(
-        dtype: DataType | str,
-        *,
-        min_value: int | float | None = None,
-        max_value: int | float | None = None,
-        allow_nan: bool | None = None,
-        allow_infinity: bool | None = None,
-        allow_subnormal: bool | None = None,
-        exclude_min: bool | None = None,
-        exclude_max: bool | None = None,
-    ) -> st.SearchStrategy[bool | int | float | complex]:
-        return _from_dtype(
-            xp,
-            api_version,
-            dtype,
-            min_value=min_value,
-            max_value=max_value,
-            allow_nan=allow_nan,
-            allow_infinity=allow_infinity,
-            allow_subnormal=allow_subnormal,
-            exclude_min=exclude_min,
-            exclude_max=exclude_max,
-        )
-
-    @defines_strategy(force_reusable_values=True)
-    def arrays(
-        dtype: DataType | str | st.SearchStrategy[DataType] | st.SearchStrategy[str],
-        shape: int | Shape | st.SearchStrategy[Shape],
-        *,
-        elements: Mapping[str, Any] | st.SearchStrategy | None = None,
-        fill: st.SearchStrategy[Any] | None = None,
-        unique: bool = False,
-    ) -> st.SearchStrategy:
-        return _arrays(
-            xp,
-            api_version,
-            dtype,
-            shape,
-            elements=elements,
-            fill=fill,
-            unique=unique,
-        )
-
-    @defines_strategy()
-    def scalar_dtypes() -> st.SearchStrategy[DataType]:
-        return _scalar_dtypes(xp, api_version)
-
-    @defines_strategy()
-    def boolean_dtypes() -> st.SearchStrategy[DataType]:
-        return _boolean_dtypes(xp)
-
-    @defines_strategy()
-    def real_dtypes() -> st.SearchStrategy[DataType]:
-        return _real_dtypes(xp)
-
-    @defines_strategy()
-    def numeric_dtypes() -> st.SearchStrategy[DataType]:
-        return _numeric_dtypes(xp, api_version)
-
-    @defines_strategy()
-    def integer_dtypes(
-        *, sizes: IntSize | Sequence[IntSize] = (8, 16, 32, 64)
-    ) -> st.SearchStrategy[DataType]:
-        return _integer_dtypes(xp, sizes=sizes)
-
-    @defines_strategy()
-    def unsigned_integer_dtypes(
-        *, sizes: IntSize | Sequence[IntSize] = (8, 16, 32, 64)
-    ) -> st.SearchStrategy[DataType]:
-        return _unsigned_integer_dtypes(xp, sizes=sizes)
-
-    @defines_strategy()
-    def floating_dtypes(
-        *, sizes: FltSize | Sequence[FltSize] = (32, 64)
-    ) -> st.SearchStrategy[DataType]:
-        return _floating_dtypes(xp, sizes=sizes)
-
-    from_dtype.__doc__ = _from_dtype.__doc__
-    arrays.__doc__ = _arrays.__doc__
-    scalar_dtypes.__doc__ = _scalar_dtypes.__doc__
-    boolean_dtypes.__doc__ = _boolean_dtypes.__doc__
-    real_dtypes.__doc__ = _real_dtypes.__doc__
-    numeric_dtypes.__doc__ = _numeric_dtypes.__doc__
-    integer_dtypes.__doc__ = _integer_dtypes.__doc__
-    unsigned_integer_dtypes.__doc__ = _unsigned_integer_dtypes.__doc__
-    floating_dtypes.__doc__ = _floating_dtypes.__doc__
-
-    class StrategiesNamespace(SimpleNamespace):
-        def __init__(self, **kwargs):
-            for attr in ["name", "api_version"]:
-                if attr not in kwargs:
-                    raise ValueError(f"'{attr}' kwarg required")
-            super().__init__(**kwargs)
-
-        @property
-        def complex_dtypes(self):
-            try:
-                return self.__dict__["complex_dtypes"]
-            except KeyError as e:
-                raise AttributeError(
-                    "You attempted to access 'complex_dtypes', but it is not "
-                    f"available for api_version='{self.api_version}' of "
-                    f"xp={self.name}."
-                ) from e
-
-        def __repr__(self):
-            f_args = self.name
-            if not inferred_version:
-                f_args += f", api_version='{self.api_version}'"
-            return f"make_strategies_namespace({f_args})"
-
-    kwargs = {
-        "name": xp.__name__,
-        "api_version": api_version,
-        "from_dtype": from_dtype,
-        "arrays": arrays,
-        "array_shapes": array_shapes,
-        "scalar_dtypes": scalar_dtypes,
-        "boolean_dtypes": boolean_dtypes,
-        "real_dtypes": real_dtypes,
-        "numeric_dtypes": numeric_dtypes,
-        "integer_dtypes": integer_dtypes,
-        "unsigned_integer_dtypes": unsigned_integer_dtypes,
-        "floating_dtypes": floating_dtypes,
-        "valid_tuple_axes": valid_tuple_axes,
-        "broadcastable_shapes": broadcastable_shapes,
-        "mutually_broadcastable_shapes": mutually_broadcastable_shapes,
-        "indices": indices,
-    }
-
-    if api_version > "2021.12":
-
-        @defines_strategy()
-        def complex_dtypes(
-            *, sizes: CpxSize | Sequence[CpxSize] = (64, 128)
-        ) -> st.SearchStrategy[DataType]:
-            return _complex_dtypes(xp, sizes=sizes)
-
-        complex_dtypes.__doc__ = _complex_dtypes.__doc__
-        kwargs["complex_dtypes"] = complex_dtypes
-
-    namespace = StrategiesNamespace(**kwargs)
-    try:
-        _args_to_xps[(xp, api_version)] = namespace
-    except TypeError:
-        pass
-
-    return namespace
+    pass
 
 
 try:
@@ -1097,14 +855,7 @@ if np is not None:
         introduced it in v1.21.1, so we just use the equivalent tiny attribute
         to keep mocking with older versions working.
         """
-        _finfo = np.finfo(dtype)  # type: ignore[call-overload]
-        return FloatInfo(
-            int(_finfo.bits),
-            float(_finfo.eps),
-            float(_finfo.max),
-            float(_finfo.min),
-            float(_finfo.tiny),
-        )
+        pass
 
     mock_xp = SimpleNamespace(
         __name__="mock",

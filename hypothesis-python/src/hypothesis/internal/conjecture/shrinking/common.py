@@ -39,7 +39,7 @@ class Shrinker:
 
     @property
     def calls(self) -> int:
-        return len(self.__seen)
+        pass
 
     def __repr__(self) -> str:
         return "{}({}initial={!r}, current={!r})".format(

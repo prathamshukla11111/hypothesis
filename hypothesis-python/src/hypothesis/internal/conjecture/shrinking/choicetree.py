@@ -23,14 +23,7 @@ def prefix_selection_order(
     to the right."""
 
     def selection_order(depth: int, n: int) -> Iterable[int]:
-        if depth < len(prefix):
-            i = prefix[depth]
-            if i >= n:
-                i = n - 1
-            yield from range(i, -1, -1)
-            yield from range(n - 1, i, -1)
-        else:
-            yield from range(n - 1, -1, -1)
+        pass
 
     return selection_order
 
@@ -39,10 +32,7 @@ def random_selection_order(random: Random) -> Callable[[int, int], Iterable[int]
     """Select choices uniformly at random."""
 
     def selection_order(depth: int, n: int) -> Iterable[int]:
-        pending = LazySequenceCopy(range(n))
-        while pending:
-            i = random.randrange(0, len(pending))
-            yield pending.pop(i)
+        pass
 
     return selection_order
 
@@ -125,7 +115,7 @@ class ChoiceTree:
 
     @property
     def exhausted(self) -> bool:
-        return self.root.exhausted
+        pass
 
     def step(
         self,
@@ -150,7 +140,7 @@ class TreeNode:
 
     @property
     def exhausted(self) -> bool:
-        return self.live_child_count == 0
+        pass
 
 
 DeadNode = TreeNode()

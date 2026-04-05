@@ -97,19 +97,7 @@ class Verbosity(Enum):
     @classmethod
     def _missing_(cls, value):
         # deprecation pathway for integer values. Can be removed in Hypothesis 7.
-        if isinstance(value, int) and not isinstance(value, bool):
-            int_to_name = {0: "quiet", 1: "normal", 2: "verbose", 3: "debug"}
-            if value in int_to_name:
-                note_deprecation(
-                    f"Passing Verbosity({value}) as an integer is deprecated. "
-                    "Hypothesis now treats Verbosity values as strings, not integers. "
-                    f"Use Verbosity.{int_to_name[value]} instead.",
-                    since="2025-11-05",
-                    has_codemod=False,
-                    stacklevel=2,
-                )
-                return cls(int_to_name[value])
-        return None
+        pass
 
     def __repr__(self) -> str:
         return f"Verbosity.{self.name}"
@@ -117,15 +105,7 @@ class Verbosity(Enum):
     @staticmethod
     def _int_value(value: "Verbosity") -> int:
         # we would just map Verbosity keys, except it's not hashable
-        mapping = {
-            Verbosity.quiet.name: 0,
-            Verbosity.normal.name: 1,
-            Verbosity.verbose.name: 2,
-            Verbosity.debug.name: 3,
-        }
-        # make sure we don't forget any new verbosity members
-        assert list(mapping.keys()) == [verbosity.name for verbosity in Verbosity]
-        return mapping[value.name]
+        pass
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Verbosity):
@@ -178,26 +158,7 @@ class Phase(Enum):
     @classmethod
     def _missing_(cls, value):
         # deprecation pathway for integer values. Can be removed in Hypothesis 7.
-        if isinstance(value, int) and not isinstance(value, bool):
-            int_to_name = {
-                0: "explicit",
-                1: "reuse",
-                2: "generate",
-                3: "target",
-                4: "shrink",
-                5: "explain",
-            }
-            if value in int_to_name:
-                note_deprecation(
-                    f"Passing Phase({value}) as an integer is deprecated. "
-                    "Hypothesis now treats Phase values as strings, not integers. "
-                    f"Use Phase.{int_to_name[value]} instead.",
-                    since="2025-11-05",
-                    has_codemod=False,
-                    stacklevel=2,
-                )
-                return cls(int_to_name[value])
-        return None
+        pass
 
     def __repr__(self) -> str:
         return f"Phase.{self.name}"
@@ -257,29 +218,7 @@ class HealthCheck(Enum, metaclass=HealthCheckMeta):
     @classmethod
     def _missing_(cls, value):
         # deprecation pathway for integer values. Can be removed in Hypothesis 7.
-        if isinstance(value, int) and not isinstance(value, bool):
-            int_to_name = {
-                1: "data_too_large",
-                2: "filter_too_much",
-                3: "too_slow",
-                5: "return_value",
-                7: "large_base_example",
-                8: "not_a_test_method",
-                9: "function_scoped_fixture",
-                10: "differing_executors",
-                11: "nested_given",
-            }
-            if value in int_to_name:
-                note_deprecation(
-                    f"Passing HealthCheck({value}) as an integer is deprecated. "
-                    "Hypothesis now treats HealthCheck values as strings, not integers. "
-                    f"Use HealthCheck.{int_to_name[value]} instead.",
-                    since="2025-11-05",
-                    has_codemod=False,
-                    stacklevel=2,
-                )
-                return cls(int_to_name[value])
-        return None
+        pass
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
@@ -287,13 +226,7 @@ class HealthCheck(Enum, metaclass=HealthCheckMeta):
     @classmethod
     def all(cls) -> list["HealthCheck"]:
         # Skipping of deprecated attributes is handled in HealthCheckMeta.__iter__
-        note_deprecation(
-            "`HealthCheck.all()` is deprecated; use `list(HealthCheck)` instead.",
-            since="2023-04-16",
-            has_codemod=True,
-            stacklevel=1,
-        )
-        return list(HealthCheck)
+        pass
 
     data_too_large = "data_too_large"
     """Checks if too many examples are aborted for being too large.
@@ -539,14 +472,7 @@ class settingsMeta(type):
 
     @property
     def default(cls) -> Optional["settings"]:
-        v = default_variable.value
-        if v is not None:
-            return v
-        if getattr(settings, "_current_profile", None) is not None:
-            assert settings._current_profile is not None
-            settings.load_profile(settings._current_profile)
-            assert default_variable.value is not None
-        return default_variable.value
+        pass
 
     def __setattr__(cls, name: str, value: object) -> None:
         if name == "default":
@@ -776,7 +702,7 @@ class settings(metaclass=settingsMeta):
 
         The default max examples is ``100``.
         """
-        return self._max_examples
+        pass
 
     @property
     def derandomize(self):
@@ -793,7 +719,7 @@ class settings(metaclass=settingsMeta):
 
         The default is ``False``. If running on CI, the default is ``True`` instead.
         """
-        return self._derandomize
+        pass
 
     @property
     def database(self):
@@ -811,27 +737,7 @@ class settings(metaclass=settingsMeta):
         See the :ref:`database documentation <database>` for a list of database
         classes, and how to define custom database classes.
         """
-        from hypothesis.database import _db_for_path
-
-        # settings.database has two conflicting requirements:
-        # * The default settings should respect changes to set_hypothesis_home_dir
-        #   in-between accesses
-        # * `s.database is s.database` should be true, except for the default settings
-        #
-        # We therefore cache s.database for everything except the default settings,
-        # which always recomputes dynamically.
-        if self._fallback is None:
-            # if self._fallback is None, we are the default settings, at which point
-            # we should recompute the database dynamically
-            assert self._database is not_set
-            return _db_for_path(not_set)
-
-        # otherwise, we cache the database
-        if self._cached_database is None:
-            self._cached_database = (
-                self._fallback.database if self._database is not_set else self._database
-            )
-        return self._cached_database
+        pass
 
     @property
     def verbosity(self):
@@ -878,7 +784,7 @@ class settings(metaclass=settingsMeta):
         output capturing for passing tests <pytest:how-to/capture-stdout-stderr>`
         to see verbose output as tests run.
         """
-        return self._verbosity
+        pass
 
     @property
     def phases(self):
@@ -937,8 +843,7 @@ class settings(metaclass=settingsMeta):
         Hypothesis couldn't efficiently find one, not that no explanation (or
         simpler failing example) exists.
         """
-
-        return self._phases
+        pass
 
     @property
     def stateful_step_count(self):
@@ -951,7 +856,7 @@ class settings(metaclass=settingsMeta):
 
         The default stateful step count is ``50``.
         """
-        return self._stateful_step_count
+        pass
 
     @property
     def report_multiple_bugs(self):
@@ -963,7 +868,7 @@ class settings(metaclass=settingsMeta):
 
         The default value is ``True``.
         """
-        return self._report_multiple_bugs
+        pass
 
     @property
     def suppress_health_check(self):
@@ -990,7 +895,7 @@ class settings(metaclass=settingsMeta):
 
             See also the :doc:`/how-to/suppress-healthchecks` how-to.
         """
-        return self._suppress_health_check
+        pass
 
     @property
     def deadline(self):
@@ -1005,7 +910,7 @@ class settings(metaclass=settingsMeta):
         The default deadline is 200 milliseconds. If running on CI, the default is
         ``None`` instead.
         """
-        return self._deadline
+        pass
 
     @property
     def print_blob(self):
@@ -1015,7 +920,7 @@ class settings(metaclass=settingsMeta):
 
         The default value is ``False``. If running on CI, the default is ``True`` instead.
         """
-        return self._print_blob
+        pass
 
     @property
     def backend(self):
@@ -1028,7 +933,7 @@ class settings(metaclass=settingsMeta):
         primitive types. We support heuristic-random, solver-based, and fuzzing-based
         backends.
         """
-        return self._backend
+        pass
 
     def __call__(self, test: T) -> T:
         """Make the settings object (self) an attribute of the test.
@@ -1180,8 +1085,7 @@ class settings(metaclass=settingsMeta):
             >>> settings.get_current_profile_name()
             'myprofile'
         """
-        assert settings._current_profile is not None
-        return settings._current_profile
+        pass
 
 
 @contextlib.contextmanager

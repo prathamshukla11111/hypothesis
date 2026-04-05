@@ -73,8 +73,7 @@ class Killed:
     next_node: "TreeNode"
 
     def _repr_pretty_(self, p: "RepresentationPrinter", cycle: bool) -> None:
-        assert cycle is False
-        p.text("Killed")
+        pass
 
 
 def _node_pretty(
@@ -84,8 +83,7 @@ def _node_pretty(
     *,
     forced: bool,
 ) -> str:
-    forced_marker = " [forced]" if forced else ""
-    return f"{choice_type} {value!r}{forced_marker} {constraints}"
+    pass
 
 
 @dataclass(slots=True, frozen=False)
@@ -99,21 +97,10 @@ class Branch:
 
     @property
     def max_children(self) -> int:
-        max_children = compute_max_children(self.choice_type, self.constraints)
-        assert max_children > 0
-        return max_children
+        pass
 
     def _repr_pretty_(self, p: "RepresentationPrinter", cycle: bool) -> None:
-        assert cycle is False
-        for i, (value, child) in enumerate(self.children.items()):
-            if i > 0:
-                p.break_()
-            p.text(
-                _node_pretty(self.choice_type, value, self.constraints, forced=False)
-            )
-            with p.indent(2):
-                p.break_()
-                p.pretty(child)
+        pass
 
 
 @dataclass(slots=True, frozen=True)
@@ -124,13 +111,7 @@ class Conclusion:
     interesting_origin: InterestingOrigin | None
 
     def _repr_pretty_(self, p: "RepresentationPrinter", cycle: bool) -> None:
-        assert cycle is False
-        o = self.interesting_origin
-        # avoid str(o), which can include multiple lines of context
-        origin = (
-            "" if o is None else f", {o.exc_type.__name__} at {o.filename}:{o.lineno}"
-        )
-        p.text(f"Conclusion ({self.status!r}{origin})")
+        pass
 
 
 # The number of max children where, beyond this, it is practically impossible
@@ -429,9 +410,7 @@ class TreeNode:
 
     @property
     def forced(self) -> Set[int]:
-        if not self.__forced:
-            return EMPTY
-        return self.__forced
+        pass
 
     def mark_forced(self, i: int) -> None:
         """
@@ -522,28 +501,7 @@ class TreeNode:
         return self.is_exhausted
 
     def _repr_pretty_(self, p: "RepresentationPrinter", cycle: bool) -> None:
-        assert cycle is False
-        indent = 0
-        for i, (choice_type, constraints, value) in enumerate(
-            zip(self.choice_types, self.constraints, self.values, strict=True)
-        ):
-            with p.indent(indent):
-                if i > 0:
-                    p.break_()
-                p.text(
-                    _node_pretty(
-                        choice_type, value, constraints, forced=i in self.forced
-                    )
-                )
-            indent += 2
-
-        with p.indent(indent):
-            if len(self.values) > 0:
-                p.break_()
-            if self.transition is not None:
-                p.pretty(self.transition)
-            else:
-                p.text("unknown")
+        pass
 
 
 class DataTree:
@@ -700,7 +658,7 @@ class DataTree:
         Returns True if every node is exhausted, and therefore the tree has
         been fully explored.
         """
-        return self.root.is_exhausted
+        pass
 
     def generate_novel_prefix(self, random: Random) -> tuple[ChoiceT, ...]:
         """Generate a short random string that (after rewriting) is not
@@ -822,12 +780,7 @@ class DataTree:
         the rewritten choice sequence and the status we would get from running
         that with the test function. If the status cannot be predicted
         from the existing values it will be None."""
-        data = ConjectureData.for_choices(choices)
-        try:
-            self.simulate_test_function(data)
-            return (data.choices, data.status)
-        except PreviouslyUnseenBehaviour:
-            return (choices, None)
+        pass
 
     def simulate_test_function(self, data: ConjectureData) -> None:
         """Run a simulated version of the test function recorded by
@@ -985,8 +938,7 @@ class DataTree:
             children.remove(child)
 
     def _repr_pretty_(self, p: "RepresentationPrinter", cycle: bool) -> None:
-        assert cycle is False
-        p.pretty(self.root)
+        pass
 
 
 class TreeRecordingObserver(DataObserver):

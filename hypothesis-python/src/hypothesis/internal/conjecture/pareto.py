@@ -338,14 +338,7 @@ class ParetoOptimiser:
                 examples that this function will reject and will get added to
                 the front. This is fine, because they will be processed on
                 later iterations of this loop."""
-                if dominance(destination, source) == DominanceRelation.LEFT_DOMINATES:
-                    # If ``destination`` dominates ``source`` then ``source``
-                    # must be dominated in the front - either ``destination`` is in
-                    # the front, or it was not added to it because it was
-                    # dominated by something in it.
-                    self.front._remove(source)
-                    return True
-                return False
+                pass
 
             shrunk = self.__engine.shrink(target, allow_transition=allow_transition)
             seen.add(choices_key(shrunk.choices))

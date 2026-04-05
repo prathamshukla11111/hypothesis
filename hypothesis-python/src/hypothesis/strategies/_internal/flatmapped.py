@@ -38,14 +38,10 @@ class FlatMapStrategy(SearchStrategy[MappedTo], Generic[MappedFrom, MappedTo]):
         self.expand = expand
 
     def calc_is_empty(self, recur: RecurT) -> bool:
-        return recur(self.base)
+        pass
 
     def calc_label(self) -> int:
-        return combine_labels(
-            self.class_label,
-            self.base.label,
-            calc_label_from_callable(self.expand),
-        )
+        pass
 
     def __repr__(self) -> str:
         if not hasattr(self, "_cached_repr"):
@@ -62,7 +58,4 @@ class FlatMapStrategy(SearchStrategy[MappedTo], Generic[MappedFrom, MappedTo]):
 
     @property
     def branches(self) -> list[SearchStrategy[MappedTo]]:
-        return [
-            FlatMapStrategy(strategy, expand=self.expand)
-            for strategy in self.base.branches
-        ]
+        pass

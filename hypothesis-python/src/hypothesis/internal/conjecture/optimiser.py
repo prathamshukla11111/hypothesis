@@ -57,7 +57,7 @@ class Optimiser:
 
     @property
     def current_score(self) -> float:
-        return self.score_function(self.current_data)
+        pass
 
     def consider_new_data(self, data: ConjectureResult | _Overrun) -> bool:
         """Consider a new data object as a candidate target. If it is better

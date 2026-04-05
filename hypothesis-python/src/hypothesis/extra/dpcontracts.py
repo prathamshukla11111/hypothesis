@@ -34,16 +34,4 @@ def fulfill(contract_func):
     This can be used as ``builds(fulfill(func), ...)`` or in the body of the
     test e.g. ``assert fulfill(func)(*args)``.
     """
-    if not hasattr(contract_func, "__contract_wrapped_func__"):
-        raise InvalidArgument(
-            f"{contract_func.__name__} has no dpcontracts preconditions"
-        )
-
-    @proxies(contract_func)
-    def inner(*args, **kwargs):
-        try:
-            return contract_func(*args, **kwargs)
-        except PreconditionError:
-            reject()
-
-    return inner
+    pass

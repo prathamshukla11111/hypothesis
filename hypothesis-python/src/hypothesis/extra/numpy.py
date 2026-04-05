@@ -606,10 +606,7 @@ def scalar_dtypes() -> st.SearchStrategy[np.dtype]:
 def defines_dtype_strategy(strat: T) -> T:
     @defines_strategy()
     @proxies(strat)
-    def inner(*args, **kwargs):
-        return strat(*args, **kwargs).map(np.dtype)
-
-    return inner
+    pass
 
 
 @defines_dtype_strategy
@@ -966,15 +963,7 @@ def unicode_string_dtypes(
 
 
 def _no_title_is_name_of_a_titled_field(ls):
-    seen = set()
-    for title_and_name, *_ in ls:
-        if isinstance(title_and_name, tuple):
-            if seen.intersection(title_and_name):  # pragma: no cover
-                # Our per-element filters below make this as rare as possible,
-                # so it's not always covered.
-                return False
-            seen.update(title_and_name)
-    return True
+    pass
 
 
 @defines_dtype_strategy
@@ -1037,7 +1026,7 @@ def nested_dtypes(
 
 @proxies(_valid_tuple_axes)
 def valid_tuple_axes(*args, **kwargs):
-    return _valid_tuple_axes(*args, **kwargs)
+    pass
 
 
 valid_tuple_axes.__doc__ = f"""
@@ -1052,7 +1041,7 @@ valid_tuple_axes.__doc__ = f"""
 
 @proxies(_mutually_broadcastable_shapes)
 def mutually_broadcastable_shapes(*args, **kwargs):
-    return _mutually_broadcastable_shapes(*args, **kwargs)
+    pass
 
 
 mutually_broadcastable_shapes.__doc__ = f"""
@@ -1172,55 +1161,7 @@ def basic_indices(
     * ``allow_newaxis`` specifies whether ``None`` is allowed in the index.
     * ``allow_ellipsis`` specifies whether ``...`` is allowed in the index.
     """
-    # Arguments to exclude scalars, zero-dim arrays, and dims of size zero were
-    # all considered and rejected.  We want users to explicitly consider those
-    # cases if they're dealing in general indexers, and while it's fiddly we can
-    # back-compatibly add them later (hence using kwonlyargs).
-    check_type(tuple, shape, "shape")
-    check_argument(
-        all(isinstance(x, int) and x >= 0 for x in shape),
-        f"{shape=}, but all dimensions must be non-negative integers.",
-    )
-    check_type(bool, allow_ellipsis, "allow_ellipsis")
-    check_type(bool, allow_newaxis, "allow_newaxis")
-    check_type(int, min_dims, "min_dims")
-    if min_dims > len(shape) and not allow_newaxis:
-        note_deprecation(
-            f"min_dims={min_dims} is larger than len(shape)={len(shape)}, "
-            "but allow_newaxis=False makes it impossible for an indexing "
-            "operation to add dimensions.",
-            since="2021-09-15",
-            has_codemod=False,
-        )
-    check_valid_dims(min_dims, "min_dims")
-
-    if max_dims is None:
-        if allow_newaxis:
-            max_dims = min(max(len(shape), min_dims) + 2, NDIM_MAX)
-        else:
-            max_dims = min(len(shape), NDIM_MAX)
-    else:
-        check_type(int, max_dims, "max_dims")
-        if max_dims > len(shape) and not allow_newaxis:
-            note_deprecation(
-                f"max_dims={max_dims} is larger than len(shape)={len(shape)}, "
-                "but allow_newaxis=False makes it impossible for an indexing "
-                "operation to add dimensions.",
-                since="2021-09-15",
-                has_codemod=False,
-            )
-    check_valid_dims(max_dims, "max_dims")
-
-    order_check("dims", 0, min_dims, max_dims)
-
-    return BasicIndexStrategy(
-        shape,
-        min_dims=min_dims,
-        max_dims=max_dims,
-        allow_ellipsis=allow_ellipsis,
-        allow_newaxis=allow_newaxis,
-        allow_fewer_indices_than_dims=True,
-    )
+    pass
 
 
 I = TypeVar("I", bound=np.integer)
@@ -1291,27 +1232,7 @@ def integer_array_indices(
     Advanced-boolean indexing can be defined as ``arrays(shape=..., dtype=bool)``,
     and is similarly left to the user.
     """
-    check_type(tuple, shape, "shape")
-    check_argument(
-        shape and all(isinstance(x, int) and x > 0 for x in shape),
-        f"{shape=} must be a non-empty tuple of integers > 0",
-    )
-    check_strategy(result_shape, "result_shape")
-    check_argument(
-        np.issubdtype(dtype, np.integer), f"{dtype=} must be an integer dtype"
-    )
-    signed = np.issubdtype(dtype, np.signedinteger)
-
-    def array_for(index_shape, size):
-        return arrays(
-            dtype=dtype,
-            shape=index_shape,
-            elements=st.integers(-size if signed else 0, size - 1),
-        )
-
-    return result_shape.flatmap(
-        lambda index_shape: st.tuples(*(array_for(index_shape, size) for size in shape))
-    )
+    pass
 
 
 def _unpack_dtype(dtype):

@@ -436,9 +436,7 @@ def frozensets(
 ) -> SearchStrategy[frozenset[Ex]]:
     """This is identical to the sets function but instead returns
     frozensets."""
-    return lists(
-        elements=elements, min_size=min_size, max_size=max_size, unique=True
-    ).map(frozenset)
+    pass
 
 
 class PrettyIter:
@@ -1028,7 +1026,7 @@ def random_module() -> SearchStrategy[RandomSeeder]:
 
     Examples from these strategy shrink to seeds closer to zero.
     """
-    return shared(RandomModule(), key="hypothesis.strategies.random_module()")
+    pass
 
 
 class BuildsStrategy(SearchStrategy[Ex]):
@@ -1044,13 +1042,7 @@ class BuildsStrategy(SearchStrategy[Ex]):
         self.kwargs = kwargs
 
     def calc_label(self) -> int:
-        return combine_labels(
-            self.class_label,
-            calc_label_from_callable(self.target),
-            *[strat.label for strat in self.args],
-            *[calc_label_from_name(k) for k in self.kwargs],
-            *[strat.label for strat in self.kwargs.values()],
-        )
+        pass
 
     def do_draw(self, data: ConjectureData) -> Ex:
         context = current_build_context()
@@ -1687,31 +1679,7 @@ def fractions(
 
     def dm_func(denom):
         """Take denom, construct numerator strategy, and build fraction."""
-        # Four cases of algebra to get integer bounds and scale factor.
-        min_num, max_num = None, None
-        if max_value is None and min_value is None:
-            pass
-        elif min_value is None:
-            max_num = denom * max_value.numerator
-            denom *= max_value.denominator
-        elif max_value is None:
-            min_num = denom * min_value.numerator
-            denom *= min_value.denominator
-        else:
-            low = min_value.numerator * max_value.denominator
-            high = max_value.numerator * min_value.denominator
-            scale = min_value.denominator * max_value.denominator
-            # After calculating our integer bounds and scale factor, we remove
-            # the gcd to avoid drawing more bytes for the example than needed.
-            # Note that `div` can be at most equal to `scale`.
-            div = math.gcd(scale, math.gcd(low, high))
-            min_num = denom * low // div
-            max_num = denom * high // div
-            denom *= scale // div
-
-        return builds(
-            Fraction, integers(min_value=min_num, max_value=max_num), just(denom)
-        )
+        pass
 
     if max_denominator is None:
         return integers(min_value=1).flatmap(dm_func)
@@ -1815,8 +1783,7 @@ def decimals(
             return Context(prec=max([precision, 1]))
 
         def int_to_decimal(val):
-            context = ctx(val)
-            return context.quantize(context.multiply(val, factor), factor)
+            pass
 
         factor = Decimal(10) ** -places
         min_num, max_num = None, None
@@ -1833,13 +1800,7 @@ def decimals(
     else:
         # Otherwise, they're like fractions featuring a power of ten
         def fraction_to_decimal(val):
-            precision = (
-                ceil(math.log10(abs(val.numerator) or 1) + math.log10(val.denominator))
-                + 1
-            )
-            return Context(prec=precision or 1).divide(
-                Decimal(val.numerator), val.denominator
-            )
+            pass
 
         strat = fractions(min_value, max_value).map(fraction_to_decimal)
     # Compose with sampled_from for infinities and NaNs as appropriate
@@ -1909,11 +1870,7 @@ def permutations(values: Sequence[T]) -> SearchStrategy[list[T]]:
     Examples from this strategy shrink by trying to become closer to the
     original order of values.
     """
-    values = check_sample(values, "permutations")
-    if not values:
-        return builds(list)
-
-    return PermutationStrategy(values)
+    pass
 
 
 class CompositeStrategy(SearchStrategy):
@@ -1927,10 +1884,7 @@ class CompositeStrategy(SearchStrategy):
         return self.definition(data.draw, *self.args, **self.kwargs)
 
     def calc_label(self) -> int:
-        return combine_labels(
-            self.class_label,
-            calc_label_from_callable(self.definition),
-        )
+        pass
 
 
 class DrawFn(Protocol):
@@ -1964,58 +1918,7 @@ class DrawFn(Protocol):
 
 def _composite(f):
     # Wrapped below, using ParamSpec if available
-    if isinstance(f, (classmethod, staticmethod)):
-        special_method = type(f)
-        f = f.__func__
-    else:
-        special_method = None
-
-    sig = get_signature(f)
-    params = tuple(sig.parameters.values())
-
-    if not (params and "POSITIONAL" in params[0].kind.name):
-        raise InvalidArgument(
-            "Functions wrapped with composite must take at least one "
-            "positional argument."
-        )
-    if params[0].default is not sig.empty:
-        raise InvalidArgument("A default value for initial argument will never be used")
-    if not (f is typing._overload_dummy or is_first_param_referenced_in_function(f)):
-        note_deprecation(
-            "There is no reason to use @st.composite on a function which "
-            "does not call the provided draw() function internally.",
-            since="2022-07-17",
-            has_codemod=False,
-        )
-    if get_origin(sig.return_annotation) is SearchStrategy:
-        ret_repr = repr(sig.return_annotation).replace("hypothesis.strategies.", "st.")
-        warnings.warn(
-            f"Return-type annotation is `{ret_repr}`, but the decorated "
-            "function should return a value (not a strategy)",
-            HypothesisWarning,
-            stacklevel=3,
-        )
-    if params[0].kind.name != "VAR_POSITIONAL":
-        params = params[1:]
-    newsig = sig.replace(
-        parameters=params,
-        return_annotation=(
-            SearchStrategy
-            if sig.return_annotation is sig.empty
-            else SearchStrategy[sig.return_annotation]
-        ),
-    )
-
-    @defines_strategy()
-    @define_function_signature(f.__name__, f.__doc__, newsig)
-    def accept(*args, **kwargs):
-        return CompositeStrategy(f, args, kwargs)
-
-    accept.__module__ = f.__module__
-    accept.__signature__ = newsig
-    if special_method is not None:
-        return special_method(accept)
-    return accept
+    pass
 
 
 composite_doc = """
@@ -2060,13 +1963,13 @@ if typing.TYPE_CHECKING or ParamSpec is not None:
     def composite(
         f: Callable[Concatenate[DrawFn, P], Ex],
     ) -> Callable[P, SearchStrategy[Ex]]:
-        return _composite(f)
+        pass
 
 else:  # pragma: no cover
 
     @cacheable
     def composite(f: Callable[..., Ex]) -> Callable[..., SearchStrategy[Ex]]:
-        return _composite(f)
+        pass
 
 
 composite.__doc__ = composite_doc
@@ -2226,9 +2129,7 @@ def shared(
 @composite
 def _maybe_nil_uuids(draw, uuid):
     # Equivalent to `random_uuids | just(...)`, with a stronger bias to the former.
-    if draw(data()).conjecture_data.draw_boolean(1 / 64):
-        return UUID("00000000-0000-0000-0000-000000000000")
-    return uuid
+    pass
 
 
 @cacheable
@@ -2346,16 +2247,16 @@ class DataStrategy(SearchStrategy):
         return "data()"
 
     def map(self, f):
-        self.__not_a_first_class_strategy("map")
+        pass
 
     def filter(self, condition: Callable[[Ex], Any]) -> NoReturn:
-        self.__not_a_first_class_strategy("filter")
+        pass
 
     def flatmap(self, f):
         self.__not_a_first_class_strategy("flatmap")
 
     def example(self) -> NoReturn:
-        self.__not_a_first_class_strategy("example")
+        pass
 
     def __not_a_first_class_strategy(self, name: str) -> NoReturn:
         raise InvalidArgument(
@@ -2418,7 +2319,7 @@ def data() -> SearchStrategy[DataObject]:
 
     Examples from this strategy shrink by shrinking the output of each draw call.
     """
-    return DataStrategy()
+    pass
 
 
 if sys.version_info < (3, 12):
@@ -2458,59 +2359,7 @@ def register_type_strategy(
     ``MyCollection`` and `inspect the type parameters within that function
     <https://stackoverflow.com/q/48572831>`__.
     """
-    # TODO: We would like to move this to the top level, but pending some major
-    # refactoring it's hard to do without creating circular imports.
-    from hypothesis.strategies._internal import types
-
-    if not types.is_a_type(custom_type):
-        raise InvalidArgument(f"{custom_type=} must be a type")
-    if custom_type in types.NON_RUNTIME_TYPES:
-        raise InvalidArgument(
-            f"{custom_type=} is not allowed to be registered, "
-            f"because there is no such thing as a runtime instance of {custom_type!r}"
-        )
-    if not (isinstance(strategy, SearchStrategy) or callable(strategy)):
-        raise InvalidArgument(
-            f"{strategy=} must be a SearchStrategy, or a function that takes "
-            "a generic type and returns a specific SearchStrategy"
-        )
-    if isinstance(strategy, SearchStrategy):
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", HypothesisSideeffectWarning)
-
-            # Calling is_empty forces materialization of lazy strategies. If this is done at import
-            # time, lazy strategies will warn about it; here, we force that warning to raise to
-            # avoid the materialization. Ideally, we'd just check if the strategy is lazy, but the
-            # lazy strategy may be wrapped underneath another strategy so that's complicated.
-            try:
-                if strategy.is_empty:
-                    raise InvalidArgument(f"{strategy=} must not be empty")
-            except HypothesisSideeffectWarning:  # pragma: no cover
-                pass
-    if types.has_type_arguments(custom_type):
-        raise InvalidArgument(
-            f"Cannot register generic type {custom_type!r}, because it has type "
-            "arguments which would not be handled.  Instead, register a function "
-            f"for {get_origin(custom_type)!r} which can inspect specific type "
-            "objects and return a strategy."
-        )
-    if (
-        "pydantic.generics" in sys.modules
-        and isinstance(custom_type, type)
-        and issubclass(custom_type, sys.modules["pydantic.generics"].GenericModel)
-        and not re.search(r"[A-Za-z_]+\[.+\]", repr(custom_type))
-        and callable(strategy)
-    ):  # pragma: no cover
-        # See https://github.com/HypothesisWorks/hypothesis/issues/2940
-        raise InvalidArgument(
-            f"Cannot register a function for {custom_type!r}, because parametrized "
-            "`pydantic.generics.GenericModel` subclasses aren't actually generic "
-            "types at runtime.  In this case, you should register a strategy "
-            "directly for each parametrized form that you anticipate using."
-        )
-
-    types._global_type_lookup[custom_type] = strategy
-    from_type.__clear_cache()  # type: ignore
+    pass
 
 
 @cacheable

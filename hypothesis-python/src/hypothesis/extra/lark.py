@@ -192,15 +192,11 @@ class LarkStrategy(st.SearchStrategy):
             self.draw_symbol(data, emit, draw_state)
 
     def calc_has_reusable_values(self, recur):
-        return True
+        pass
 
 
 def check_explicit(name):
-    def inner(value):
-        check_type(str, value, "value drawn from " + name)
-        return value
-
-    return inner
+    pass
 
 
 @cacheable
@@ -235,13 +231,4 @@ def from_lark(
     The :pypi:`hypothesmith` project includes a strategy for Python source,
     based on a grammar and careful post-processing.
     """
-    check_type(lark.lark.Lark, grammar, "grammar")
-    if explicit is None:
-        explicit = {}
-    else:
-        check_type(dict, explicit, "explicit")
-        explicit = {
-            k: v.map(check_explicit(f"explicit[{k!r}]={v!r}"))
-            for k, v in explicit.items()
-        }
-    return LarkStrategy(grammar, start, explicit, alphabet)
+    pass

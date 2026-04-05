@@ -70,43 +70,13 @@ def _usable_dir(path: StrPathT) -> bool:
     either the directory exists and can be used, or its root directory can
     be used and we can make the directory as needed.
     """
-    path = Path(path)
-    try:
-        while not path.exists():
-            # Loop terminates because the root dir ('/' on unix) always exists.
-            path = path.parent
-        return path.is_dir() and os.access(path, os.R_OK | os.W_OK | os.X_OK)
-    except PermissionError:  # pragma: no cover
-        # path.exists() returns False on 3.14+ instead of raising. See
-        # https://docs.python.org/3.14/library/pathlib.html#querying-file-type-and-status
-        return False
+    pass
 
 
 def _db_for_path(
     path: StrPathT | UniqueIdentifier | Literal[":memory:"] | None = None,
 ) -> "ExampleDatabase":
-    if path is not_set:
-        if os.getenv("HYPOTHESIS_DATABASE_FILE") is not None:  # pragma: no cover
-            raise HypothesisException(
-                "The $HYPOTHESIS_DATABASE_FILE environment variable no longer has any "
-                "effect.  Configure your database location via a settings profile instead.\n"
-                "https://hypothesis.readthedocs.io/en/latest/settings.html#settings-profiles"
-            )
-
-        path = storage_directory("examples", intent_to_write=False)
-        if not _usable_dir(path):  # pragma: no cover
-            warnings.warn(
-                "The database setting is not configured, and the default "
-                "location is unusable - falling back to an in-memory "
-                f"database for this session.  {path=}",
-                HypothesisWarning,
-                stacklevel=3,
-            )
-            return InMemoryExampleDatabase()
-    if path in (None, ":memory:"):
-        return InMemoryExampleDatabase()
-    path = cast(StrPathT, path)
-    return DirectoryBasedExampleDatabase(path)
+    pass
 
 
 class _EDMeta(abc.ABCMeta):
@@ -286,10 +256,7 @@ class ExampleDatabase(metaclass=_EDMeta):
         the database knows that a deletion has occurred in ``key``, but does not
         know what value was deleted.
         """
-        had_listeners = bool(self._listeners)
-        self._listeners.append(f)
-        if not had_listeners:
-            self._start_listening()
+        pass
 
     def remove_listener(self, f: ListenerT, /) -> None:
         """
@@ -297,18 +264,11 @@ class ExampleDatabase(metaclass=_EDMeta):
 
         If ``f`` is not in the list of change listeners, silently do nothing.
         """
-        if f not in self._listeners:
-            return
-        self._listeners.remove(f)
-        if not self._listeners:
-            self._stop_listening()
+        pass
 
     def clear_listeners(self) -> None:
         """Remove all change listeners."""
-        had_listeners = bool(self._listeners)
-        self._listeners.clear()
-        if had_listeners:
-            self._stop_listening()
+        pass
 
     def _broadcast_change(self, event: ListenerEventT) -> None:
         """
@@ -342,11 +302,7 @@ class ExampleDatabase(metaclass=_EDMeta):
         ``_start_listening`` calls without an intermediate ``_stop_listening``
         call.
         """
-        warnings.warn(
-            f"{self.__class__} does not support listening for changes",
-            HypothesisWarning,
-            stacklevel=4,
-        )
+        pass
 
     def _stop_listening(self) -> None:
         """
@@ -357,11 +313,7 @@ class ExampleDatabase(metaclass=_EDMeta):
         ``_stop_listening`` calls without an intermediate ``_start_listening``
         call.
         """
-        warnings.warn(
-            f"{self.__class__} does not support stopping listening for changes",
-            HypothesisWarning,
-            stacklevel=4,
-        )
+        pass
 
 
 class InMemoryExampleDatabase(ExampleDatabase):
@@ -555,122 +507,10 @@ class DirectoryBasedExampleDatabase(ExampleDatabase):
             self.delete(self._metakeys_name, key)
 
     def _start_listening(self) -> None:
-        try:
-            from watchdog.events import (
-                DirCreatedEvent,
-                DirDeletedEvent,
-                DirMovedEvent,
-                FileCreatedEvent,
-                FileDeletedEvent,
-                FileMovedEvent,
-                FileSystemEventHandler,
-            )
-            from watchdog.observers import Observer
-        except ImportError:
-            warnings.warn(
-                f"listening for changes in a {self.__class__.__name__} "
-                "requires the watchdog library. To install, run "
-                "`pip install hypothesis[watchdog]`",
-                HypothesisWarning,
-                stacklevel=4,
-            )
-            return
-
-        hash_to_key = {_hash(key): key for key in self.fetch(self._metakeys_name)}
-        _metakeys_hash = self._metakeys_hash
-        _broadcast_change = self._broadcast_change
-
-        class Handler(
-            FileSystemEventHandler
-        ):  # pragma: no cover # skipped in test_database.py for now
-            def on_created(_self, event: FileCreatedEvent | DirCreatedEvent) -> None:
-                # we only registered for the file creation event
-                assert not isinstance(event, DirCreatedEvent)
-                # watchdog events are only bytes if we passed a byte path to
-                # .schedule
-                assert isinstance(event.src_path, str)
-
-                value_path = Path(event.src_path)
-                # the parent dir represents the key, and its name is the key hash
-                key_hash = value_path.parent.name
-
-                if key_hash == _metakeys_hash:
-                    try:
-                        hash_to_key[value_path.name] = value_path.read_bytes()
-                    except OSError:  # pragma: no cover
-                        # this might occur if all the values in a key have been
-                        # deleted and DirectoryBasedExampleDatabase removes its
-                        # metakeys entry (which is `value_path` here`).
-                        pass
-                    return
-
-                key = hash_to_key.get(key_hash)
-                if key is None:  # pragma: no cover
-                    # we didn't recognize this key. This shouldn't ever happen,
-                    # but some race condition trickery might cause this.
-                    return
-
-                try:
-                    value = value_path.read_bytes()
-                except OSError:  # pragma: no cover
-                    return
-
-                _broadcast_change(("save", (key, value)))
-
-            def on_deleted(self, event: FileDeletedEvent | DirDeletedEvent) -> None:
-                assert not isinstance(event, DirDeletedEvent)
-                assert isinstance(event.src_path, str)
-
-                value_path = Path(event.src_path)
-                key = hash_to_key.get(value_path.parent.name)
-                if key is None:  # pragma: no cover
-                    return
-
-                _broadcast_change(("delete", (key, None)))
-
-            def on_moved(self, event: FileMovedEvent | DirMovedEvent) -> None:
-                assert not isinstance(event, DirMovedEvent)
-                assert isinstance(event.src_path, str)
-                assert isinstance(event.dest_path, str)
-
-                src_path = Path(event.src_path)
-                dest_path = Path(event.dest_path)
-                k1 = hash_to_key.get(src_path.parent.name)
-                k2 = hash_to_key.get(dest_path.parent.name)
-
-                if k1 is None or k2 is None:  # pragma: no cover
-                    return
-
-                try:
-                    value = dest_path.read_bytes()
-                except OSError:  # pragma: no cover
-                    return
-
-                _broadcast_change(("delete", (k1, value)))
-                _broadcast_change(("save", (k2, value)))
-
-        # If we add a listener to a DirectoryBasedExampleDatabase whose database
-        # directory doesn't yet exist, the watchdog observer will not fire any
-        # events, even after the directory gets created.
-        #
-        # Ensure the directory exists before starting the observer.
-        self.path.mkdir(exist_ok=True, parents=True)
-        self._observer = Observer()
-        self._observer.schedule(
-            Handler(),
-            # remove type: ignore when released
-            # https://github.com/gorakhargosh/watchdog/pull/1096
-            self.path,  # type: ignore
-            recursive=True,
-            event_filter=[FileCreatedEvent, FileDeletedEvent, FileMovedEvent],
-        )
-        self._observer.start()
+        pass
 
     def _stop_listening(self) -> None:
-        assert self._observer is not None
-        self._observer.stop()
-        self._observer.join()
-        self._observer = None
+        pass
 
 
 class ReadOnlyDatabase(ExampleDatabase):
@@ -772,12 +612,10 @@ class MultiplexedDatabase(ExampleDatabase):
             db.move(src, dest, value)
 
     def _start_listening(self) -> None:
-        for db in self._wrapped:
-            db.add_listener(self._broadcast_change)
+        pass
 
     def _stop_listening(self) -> None:
-        for db in self._wrapped:
-            db.remove_listener(self._broadcast_change)
+        pass
 
 
 class GitHubArtifactDatabase(ExampleDatabase):
@@ -1150,10 +988,7 @@ class BackgroundWriteDatabase(ExampleDatabase):
         return isinstance(other, BackgroundWriteDatabase) and self._db == other._db
 
     def _worker(self) -> None:
-        while True:
-            method, args = self._queue.get()
-            getattr(self._db, method)(*args)
-            self._queue.task_done()
+        pass
 
     def _join(self, timeout: float | None = None) -> None:
         # copy of Queue.join with a timeout. https://bugs.python.org/issue9634
@@ -1178,10 +1013,10 @@ class BackgroundWriteDatabase(ExampleDatabase):
         self._queue.put(("move", (src, dest, value)))
 
     def _start_listening(self) -> None:
-        self._db.add_listener(self._broadcast_change)
+        pass
 
     def _stop_listening(self) -> None:
-        self._db.remove_listener(self._broadcast_change)
+        pass
 
 
 def _pack_uleb128(value: int) -> bytes:

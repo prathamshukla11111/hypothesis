@@ -207,98 +207,11 @@ class TextStrategy(ListStrategy[str]):
     )
 
     def filter(self, condition):
-        elems = unwrap_strategies(self.element_strategy)
-        if (
-            condition is str.isidentifier
-            and self.max_size >= 1
-            and isinstance(elems, OneCharStringStrategy)
-        ):
-            from hypothesis.strategies import builds, nothing
-
-            id_start, id_continue = _identifier_characters()
-            if not (elems.intervals & id_start):
-                return nothing()
-            return builds(
-                "{}{}".format,
-                OneCharStringStrategy(elems.intervals & id_start),
-                TextStrategy(
-                    OneCharStringStrategy(elems.intervals & id_continue),
-                    min_size=max(0, self.min_size - 1),
-                    max_size=self.max_size - 1,
-                ),
-                # Filter to ensure that NFKC normalization keeps working in future
-            ).filter(str.isidentifier)
-        if (new := _string_filter_rewrite(self, str, condition)) is not None:
-            return new
-        return super().filter(condition)
+        pass
 
 
 def _string_filter_rewrite(self, kind, condition):
-    if condition in (kind.lower, kind.title, kind.upper):
-        k = kind.__name__
-        warnings.warn(
-            f"You applied {k}.{condition.__name__} as a filter, but this allows "
-            f"all nonempty strings!  Did you mean {k}.is{condition.__name__}?",
-            HypothesisWarning,
-            stacklevel=2,
-        )
-
-    if (
-        (
-            kind is bytes
-            or isinstance(
-                unwrap_strategies(self.element_strategy), OneCharStringStrategy
-            )
-        )
-        and isinstance(pattern := getattr(condition, "__self__", None), re.Pattern)
-        and isinstance(pattern.pattern, kind)
-    ):
-        from hypothesis.strategies._internal.regex import regex_strategy
-
-        if condition.__name__ == "match":
-            # Replace with an easier-to-handle equivalent condition
-            caret, close = ("^(?:", ")") if kind is str else (b"^(?:", b")")
-            pattern = re.compile(caret + pattern.pattern + close, flags=pattern.flags)
-            condition = pattern.search
-
-        if condition.__name__ in ("search", "findall", "fullmatch"):
-            s = regex_strategy(
-                pattern,
-                fullmatch=condition.__name__ == "fullmatch",
-                alphabet=self.element_strategy if kind is str else None,
-            )
-            if self.min_size > 0:
-                s = s.filter(partial(min_len, self.min_size))
-            if self.max_size < 1e999:
-                s = s.filter(partial(max_len, self.max_size))
-            return s
-        elif condition.__name__ in ("finditer", "scanner"):
-            # PyPy implements `finditer` as an alias to their `scanner` method
-            warnings.warn(
-                f"You applied {pretty(condition)} as a filter, but this allows "
-                f"any string at all!  Did you mean .findall ?",
-                HypothesisWarning,
-                stacklevel=3,
-            )
-            return self
-        elif condition.__name__ == "split":
-            warnings.warn(
-                f"You applied {pretty(condition)} as a filter, but this allows "
-                f"any nonempty string!  Did you mean .search ?",
-                HypothesisWarning,
-                stacklevel=3,
-            )
-            return self.filter(bool)
-
-    # We use ListStrategy filter logic for the conditions that *only* imply
-    # the string is nonempty.  Here, we increment the min_size but still apply
-    # the filter for conditions that imply nonempty *and specific contents*.
-    if condition in self._nonempty_and_content_filters and self.max_size >= 1:
-        self = copy.copy(self)
-        self.min_size = max(1, self.min_size)
-        return ListStrategy.filter(self, condition)
-
-    return None
+    pass
 
 
 # Excerpted from https://www.unicode.org/Public/15.0.0/ucd/PropList.txt
@@ -328,30 +241,7 @@ _PROPLIST = """
 @lru_cache
 def _identifier_characters() -> tuple[IntervalSet, IntervalSet]:
     """See https://docs.python.org/3/reference/lexical_analysis.html#identifiers"""
-    # Start by computing the set of special characters
-    chars = {"Other_ID_Start": "", "Other_ID_Continue": ""}
-    for line in _PROPLIST.splitlines():
-        if m := re.match(r"([0-9A-F.]+) +; (\w+) # ", line):
-            codes, prop = m.groups()
-            span = range(int(codes[:4], base=16), int(codes[-4:], base=16) + 1)
-            chars[prop] += "".join(chr(x) for x in span)
-
-    # Then get the basic set by Unicode category and known extras
-    id_start = charmap.query(
-        categories=("Lu", "Ll", "Lt", "Lm", "Lo", "Nl"),
-        include_characters="_" + chars["Other_ID_Start"],
-    )
-    id_start -= IntervalSet.from_string(
-        # Magic value: the characters which NFKC-normalize to be invalid identifiers.
-        # Conveniently they're all in `id_start`, so we only need to do this once.
-        "\u037a\u0e33\u0eb3\u2e2f\u309b\u309c\ufc5e\ufc5f\ufc60\ufc61\ufc62\ufc63"
-        "\ufdfa\ufdfb\ufe70\ufe72\ufe74\ufe76\ufe78\ufe7a\ufe7c\ufe7e\uff9e\uff9f"
-    )
-    id_continue = id_start | charmap.query(
-        categories=("Mn", "Mc", "Nd", "Pc"),
-        include_characters=chars["Other_ID_Continue"],
-    )
-    return id_start, id_continue
+    pass
 
 
 class BytesStrategy(SearchStrategy):
@@ -375,6 +265,4 @@ class BytesStrategy(SearchStrategy):
     )
 
     def filter(self, condition):
-        if (new := _string_filter_rewrite(self, bytes, condition)) is not None:
-            return new
-        return ListStrategy.filter(self, condition)
+        pass

@@ -195,14 +195,12 @@ class Span:
         """A label is an opaque value that associates each span with its
         approximate origin, such as a particular strategy class or a particular
         kind of draw."""
-        return self.owner.labels[self.owner.label_indices[self.index]]
+        pass
 
     @property
     def parent(self) -> int | None:
         """The index of the span that this one is nested directly within."""
-        if self.index == 0:
-            return None
-        return self.owner.parentage[self.index]
+        pass
 
     @property
     def start(self) -> int:
@@ -210,14 +208,14 @@ class Span:
 
     @property
     def end(self) -> int:
-        return self.owner.ends[self.index]
+        pass
 
     @property
     def depth(self) -> int:
         """
         Depth of this span in the span tree. The top-level span has a depth of 0.
         """
-        return self.owner.depths[self.index]
+        pass
 
     @property
     def discarded(self) -> bool:
@@ -226,7 +224,7 @@ class Span:
         this span completely, without affecting the value produced by its enclosing
         strategy. Typically set when a rejection sampler decides to reject a
         generated value and try again."""
-        return self.index in self.owner.discarded
+        pass
 
     @property
     def choice_count(self) -> int:
@@ -237,7 +235,7 @@ class Span:
     def children(self) -> "list[Span]":
         """The list of all spans with this as a parent, in increasing index
         order."""
-        return [self.owner[i] for i in self.owner.children[self.index]]
+        pass
 
 
 class SpanProperty:
@@ -449,50 +447,39 @@ class Spans:
 
     @cached_property
     def starts_and_ends(self) -> tuple[IntList, IntList]:
-        return _starts_and_ends(self).run()
+        pass
 
     @property
     def starts(self) -> IntList:
-        return self.starts_and_ends[0]
+        pass
 
     @property
     def ends(self) -> IntList:
-        return self.starts_and_ends[1]
+        pass
 
     @cached_property
     def discarded(self) -> frozenset[int]:
-        return _discarded(self).run()
+        pass
 
     @cached_property
     def parentage(self) -> IntList:
-        return _parentage(self).run()
+        pass
 
     @cached_property
     def depths(self) -> IntList:
-        return _depths(self).run()
+        pass
 
     @cached_property
     def label_indices(self) -> IntList:
-        return _label_indices(self).run()
+        pass
 
     @cached_property
     def mutator_groups(self) -> list[set[tuple[int, int]]]:
-        return _mutator_groups(self).run()
+        pass
 
     @property
     def children(self) -> list[Sequence[int]]:
-        if self.__children is None:
-            children = [IntList() for _ in range(len(self))]
-            for i, p in enumerate(self.parentage):
-                if i > 0:
-                    children[p].append(i)
-            # Replace empty children lists with a tuple to reduce
-            # memory usage.
-            for i, c in enumerate(children):
-                if not c:
-                    children[i] = ()  # type: ignore
-            self.__children = children  # type: ignore
-        return self.__children  # type: ignore
+        pass
 
     def __len__(self) -> int:
         return self.__length
@@ -594,7 +581,7 @@ class ConjectureResult:
 
     @property
     def choices(self) -> tuple[ChoiceT, ...]:
-        return tuple(node.value for node in self.nodes)
+        pass
 
 
 class ConjectureData:
@@ -724,7 +711,7 @@ class ConjectureData:
 
     @property
     def choices(self) -> tuple[ChoiceT, ...]:
-        return tuple(node.value for node in self.nodes)
+        pass
 
     # draw_* functions might be called in one of two contexts: either "above" or
     # "below" the choice sequence. For instance, draw_string calls draw_boolean
@@ -1288,10 +1275,7 @@ class ConjectureData:
 
     @property
     def spans(self) -> Spans:
-        assert self.frozen
-        if self.__spans is None:
-            self.__spans = Spans(record=self.__span_record)
-        return self.__spans
+        pass
 
     def freeze(self) -> None:
         if self.frozen:
@@ -1336,7 +1320,7 @@ class ConjectureData:
         raise StopTest(self.testcounter)
 
     def mark_interesting(self, interesting_origin: InterestingOrigin) -> NoReturn:
-        self.conclude_test(Status.INTERESTING, interesting_origin)
+        pass
 
     def mark_invalid(self, why: str | None = None) -> NoReturn:
         if why is not None:

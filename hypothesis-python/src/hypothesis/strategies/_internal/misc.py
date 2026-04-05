@@ -43,7 +43,7 @@ class JustStrategy(SampledFromStrategy[Ex]):
 
     @property
     def value(self) -> Ex:
-        return self.elements[0]
+        pass
 
     def __repr__(self) -> str:
         suffix = "".join(
@@ -55,7 +55,7 @@ class JustStrategy(SampledFromStrategy[Ex]):
         return f"just({get_pretty_function_description(self.value)}){suffix}"
 
     def calc_is_cacheable(self, recur: RecurT) -> bool:
-        return is_hashable(self.value)
+        pass
 
     def do_filtered_draw(self, data: ConjectureData) -> Ex | UniqueIdentifier:
         # The parent class's `do_draw` implementation delegates directly to
@@ -91,7 +91,7 @@ def none() -> SearchStrategy[None]:
 
 class Nothing(SearchStrategy["Never"]):
     def calc_is_empty(self, recur: RecurT) -> bool:
-        return True
+        pass
 
     def do_draw(self, data: ConjectureData) -> NoReturn:
         # This method should never be called because draw() will mark the
@@ -99,16 +99,16 @@ class Nothing(SearchStrategy["Never"]):
         raise NotImplementedError("This should never happen")
 
     def calc_has_reusable_values(self, recur: RecurT) -> bool:
-        return True
+        pass
 
     def __repr__(self) -> str:
         return "nothing()"
 
     def map(self, pack: Callable[[Any], Any]) -> SearchStrategy["Never"]:
-        return self
+        pass
 
     def filter(self, condition: Callable[[Any], Any]) -> "SearchStrategy[Never]":
-        return self
+        pass
 
     def flatmap(
         self, expand: Callable[[Any], "SearchStrategy[Any]"]

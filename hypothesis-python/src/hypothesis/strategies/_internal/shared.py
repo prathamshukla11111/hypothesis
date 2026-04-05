@@ -31,7 +31,7 @@ class SharedStrategy(SearchStrategy[Ex]):
             return f"shared({self.base!r})"
 
     def calc_label(self) -> int:
-        return self.base.calc_label()
+        pass
 
     # Ideally would be -> Ex, but key collisions with different-typed values are
     # possible. See https://github.com/HypothesisWorks/hypothesis/issues/4301.

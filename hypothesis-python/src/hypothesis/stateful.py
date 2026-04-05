@@ -69,13 +69,7 @@ def _is_singleton(obj: object) -> bool:
     Returns True if two separately created instances of v will have the same id
     (due to interning).
     """
-    # The range [-5, 256] is a cpython implementation detail. This may not work
-    # well on other platforms.
-    if isinstance(obj, int) and -5 <= obj <= 256:
-        return True
-    # cpython also interns compile-time strings, but let's just ignore those for
-    # now.
-    return isinstance(obj, bool) or obj is None
+    pass
 
 
 class _OmittedArgument:
@@ -101,153 +95,7 @@ def get_state_machine_test(
 ):
     # This function is split out from run_state_machine_as_test so that
     # HypoFuzz can get and call the test function directly.
-    if settings is None:
-        try:
-            settings = state_machine_factory.TestCase.settings
-            check_type(Settings, settings, "state_machine_factory.TestCase.settings")
-        except AttributeError:
-            settings = Settings(deadline=None, suppress_health_check=list(HealthCheck))
-    check_type(Settings, settings, "settings")
-    check_type(int, _min_steps, "_min_steps")
-    if _min_steps < 0:
-        # Because settings can vary via e.g. profiles, settings.stateful_step_count
-        # overrides this argument and we don't bother cross-validating.
-        raise InvalidArgument(f"_min_steps={_min_steps} must be non-negative.")
-    _flaky_state = _flaky_state or {}
-
-    @settings
-    @given(st.data())
-    def run_state_machine(data):
-        cd = data.conjecture_data
-        machine: RuleBasedStateMachine = state_machine_factory()
-        check_type(RuleBasedStateMachine, machine, "state_machine_factory()")
-        cd.hypothesis_runner = machine
-        machine._observability_predicates = cd._observability_predicates  # alias
-
-        print_steps = (
-            current_build_context().is_final or current_verbosity() >= Verbosity.debug
-        )
-        cd._stateful_repr_parts = []
-
-        def output(s):
-            if print_steps:
-                report(s)
-            if observability_enabled():
-                cd._stateful_repr_parts.append(s)
-
-        try:
-            output(f"state = {machine.__class__.__name__}()")
-            machine.check_invariants(settings, output, cd._stateful_run_times)
-            max_steps = settings.stateful_step_count
-            steps_run = 0
-
-            while True:
-                # We basically always want to run the maximum number of steps,
-                # but need to leave a small probability of terminating early
-                # in order to allow for reducing the number of steps once we
-                # find a failing test case, so we stop with probability of
-                # 2 ** -16 during normal operation but force a stop when we've
-                # generated enough steps.
-                cd.start_span(STATE_MACHINE_RUN_LABEL)
-                must_stop = None
-                if steps_run >= max_steps:
-                    must_stop = True
-                elif steps_run <= _min_steps:
-                    must_stop = False
-                elif cd.length > (0.8 * BUFFER_SIZE):
-                    # Better to stop after fewer steps, than always overrun and retry.
-                    # See https://github.com/HypothesisWorks/hypothesis/issues/3618
-                    must_stop = True
-
-                start_draw = perf_counter()
-                start_gc = gc_cumulative_time()
-                if cd.draw_boolean(p=2**-16, forced=must_stop):
-                    break
-                steps_run += 1
-
-                # Choose a rule to run, preferring an initialize rule if there are
-                # any which have not been run yet.
-                _flaky_state["selecting_rule"] = True
-                if machine._initialize_rules_to_run:
-                    init_rules = [
-                        st.tuples(st.just(rule), st.fixed_dictionaries(rule.arguments))
-                        for rule in machine._initialize_rules_to_run
-                    ]
-                    rule, data = cd.draw(st.one_of(init_rules))
-                    machine._initialize_rules_to_run.remove(rule)
-                else:
-                    rule, data = cd.draw(machine._rules_strategy)
-                _flaky_state["selecting_rule"] = False
-                draw_label = f"generate:rule:{rule.function.__name__}"
-                cd.draw_times.setdefault(draw_label, 0.0)
-                in_gctime = gc_cumulative_time() - start_gc
-                cd.draw_times[draw_label] += perf_counter() - start_draw - in_gctime
-
-                # Pretty-print the values this rule was called with *before* calling
-                # _add_results_to_targets, to avoid printing arguments which are also
-                # a return value using the variable name they are assigned to.
-                # See https://github.com/HypothesisWorks/hypothesis/issues/2341
-                if print_steps or observability_enabled():
-                    data_to_print = {
-                        k: machine._pretty_print(v) for k, v in data.items()
-                    }
-
-                # Assign 'result' here in case executing the rule fails below
-                result = multiple()
-                try:
-                    data = dict(data)
-                    for k, v in list(data.items()):
-                        if isinstance(v, VarReference):
-                            data[k] = machine.names_to_values[v.name]
-                        elif isinstance(v, list) and all(
-                            isinstance(item, VarReference) for item in v
-                        ):
-                            data[k] = [machine.names_to_values[item.name] for item in v]
-
-                    label = f"execute:rule:{rule.function.__name__}"
-                    start = perf_counter()
-                    start_gc = gc_cumulative_time()
-                    result = rule.function(machine, **data)
-                    in_gctime = gc_cumulative_time() - start_gc
-                    cd._stateful_run_times[label] += perf_counter() - start - in_gctime
-
-                    if rule.targets:
-                        if isinstance(result, MultipleResults):
-                            machine._add_results_to_targets(rule.targets, result.values)
-                        else:
-                            machine._add_results_to_targets(rule.targets, [result])
-                    elif result is not None:
-                        fail_health_check(
-                            settings,
-                            "Rules should return None if they have no target bundle, "
-                            f"but {rule.function.__qualname__} returned {result!r}",
-                            HealthCheck.return_value,
-                        )
-                finally:
-                    if print_steps or observability_enabled():
-                        # 'result' is only used if the step has target bundles.
-                        # If it does, and the result is a 'MultipleResult',
-                        # then 'print_step' prints a multi-variable assignment.
-                        output(machine._repr_step(rule, data_to_print, result))
-                machine.check_invariants(settings, output, cd._stateful_run_times)
-                cd.stop_span()
-        finally:
-            output("state.teardown()")
-            machine.teardown()
-
-    # Use a machine digest to identify stateful tests in the example database
-    run_state_machine.hypothesis.inner_test._hypothesis_internal_add_digest = (
-        function_digest(state_machine_factory)
-    )
-    # Copy some attributes so @seed and @reproduce_failure "just work"
-    run_state_machine._hypothesis_internal_use_seed = getattr(
-        state_machine_factory, "_hypothesis_internal_use_seed", None
-    )
-    run_state_machine._hypothesis_internal_use_reproduce_failure = getattr(
-        state_machine_factory, "_hypothesis_internal_use_reproduce_failure", None
-    )
-    run_state_machine._hypothesis_internal_print_given_args = False
-    return run_state_machine
+    pass
 
 
 def run_state_machine_as_test(state_machine_factory, *, settings=None, _min_steps=0):
@@ -258,23 +106,7 @@ def run_state_machine_as_test(state_machine_factory, *, settings=None, _min_step
     RuleBasedStateMachine when called with no arguments - it can be a class or a
     function. settings will be used to control the execution of the test.
     """
-    flaky_state = {"selecting_rule": False}
-    state_machine_test = get_state_machine_test(
-        state_machine_factory,
-        settings=settings,
-        _min_steps=_min_steps,
-        _flaky_state=flaky_state,
-    )
-    try:
-        state_machine_test()
-    except FlakyStrategyDefinition as err:
-        if flaky_state["selecting_rule"]:
-            add_note(
-                err,
-                "while selecting a rule to run. This is usually caused by "
-                "a flaky precondition, or a bundle that was unexpectedly empty.",
-            )
-        raise
+    pass
 
 
 class StateMachineMeta(type):
@@ -341,34 +173,16 @@ class RuleBasedStateMachine(metaclass=StateMachineMeta):
         self._rules_strategy = RuleStrategy(self)
 
     def _pretty_print(self, value):
-        if isinstance(value, VarReference):
-            return value.name
-        elif isinstance(value, list) and all(
-            isinstance(item, VarReference) for item in value
-        ):
-            return "[" + ", ".join([item.name for item in value]) + "]"
-        self.__stream.seek(0)
-        self.__stream.truncate(0)
-        self.__printer.output_width = 0
-        self.__printer.buffer_width = 0
-        self.__printer.buffer.clear()
-        self.__printer.pretty(value)
-        self.__printer.flush()
-        return self.__stream.getvalue()
+        pass
 
     def __repr__(self):
         return f"{type(self).__name__}({nicerepr(self.bundles)})"
 
     def _new_name(self, target):
-        result = f"{target}_{self.names_counters[target]}"
-        self.names_counters[target] += 1
-        self.names_list.append(result)
-        return result
+        pass
 
     def _last_names(self, n: int) -> list[str]:
-        len_ = len(self.names_list)
-        assert len_ >= n
-        return self.names_list[len_ - n :]
+        pass
 
     def bundle(self, name):
         return self.bundles.setdefault(name, [])
@@ -414,52 +228,11 @@ class RuleBasedStateMachine(metaclass=StateMachineMeta):
         return state
 
     def _repr_step(self, rule: "Rule", data: Any, result: Any) -> str:
-        output_assignment = ""
-        extra_assignment_lines = []
-        if rule.targets:
-            number_of_results = (
-                len(result.values) if isinstance(result, MultipleResults) else 1
-            )
-            number_of_last_names = len(rule.targets) * number_of_results
-            last_names = self._last_names(number_of_last_names)
-            if isinstance(result, MultipleResults):
-                if len(result.values) == 1:
-                    # len-1 tuples
-                    output_per_target = [f"({name},)" for name in last_names]
-                    output_assignment = " = ".join(output_per_target) + " = "
-                elif result.values:
-                    # multiple values, multiple targets -- use the first target
-                    # for the assignment from function, and do the other target
-                    # assignments on separate lines
-                    names_per_target = list(batched(last_names, number_of_results))
-                    first_target_output = ", ".join(names_per_target[0])
-                    output_assignment = first_target_output + " = "
-                    for other_target_names in names_per_target[1:]:
-                        other_target_output = ", ".join(other_target_names)
-                        extra_assignment_lines.append(
-                            other_target_output + " = " + first_target_output
-                        )
-            else:
-                output_assignment = " = ".join(last_names) + " = "
-        args = ", ".join(f"{k}={v}" for k, v in data.items())
-        output_line = f"{output_assignment}state.{rule.function.__name__}({args})"
-        return "\n".join([output_line] + extra_assignment_lines)
+        pass
 
     def _add_results_to_targets(self, targets, results):
         # Note, the assignment order here is reflected in _repr_step
-        for target in targets:
-            for result in results:
-                name = self._new_name(target)
-
-                def printer(obj, p, cycle, name=name):
-                    return p.text(name)
-
-                # see
-                # https://github.com/HypothesisWorks/hypothesis/pull/4266#discussion_r1949619102
-                if not _is_singleton(result):
-                    self.__printer.singleton_pprinters.setdefault(id(result), printer)
-                self.names_to_values[name] = result
-                self.bundles.setdefault(target, []).append(VarReference(name))
+        pass
 
     def check_invariants(self, settings, output, runtimes):
         for invar in self.invariants:
@@ -498,18 +271,7 @@ class RuleBasedStateMachine(metaclass=StateMachineMeta):
     @classmethod
     @lru_cache
     def _to_test_case(cls):
-        class StateMachineTestCase(TestCase):
-            settings = Settings(deadline=None, suppress_health_check=list(HealthCheck))
-
-            def runTest(self):
-                run_state_machine_as_test(cls, settings=self.settings)
-
-            runTest.is_hypothesis_test = True
-            runTest._hypothesis_state_machine_class = cls
-
-        StateMachineTestCase.__name__ = cls.__name__ + ".TestCase"
-        StateMachineTestCase.__qualname__ = cls.__qualname__ + ".TestCase"
-        return StateMachineTestCase
+        pass
 
 
 @dataclass(slots=True, frozen=False)
@@ -628,7 +390,7 @@ class Bundle(SearchStrategy[Ex]):
 
     def calc_is_empty(self, recur):
         # We assume that a bundle will grow over time
-        return False
+        pass
 
     def is_currently_empty(self, data):
         # ``self_strategy`` is an instance of the ``st.runner()`` strategy.
@@ -673,9 +435,7 @@ def consumes(bundle: Bundle[Ex]) -> SearchStrategy[Ex]:
     will consume a value from Bundle ``b2`` and several values from Bundle
     ``b3`` to populate ``value2`` and ``value3`` each time it is executed.
     """
-    if not isinstance(bundle, Bundle):
-        raise TypeError("Argument to be consumed must be a bundle.")
-    return BundleConsumer(bundle)
+    pass
 
 
 @dataclass(slots=True, frozen=True)
@@ -693,7 +453,7 @@ def multiple(*args: T) -> MultipleResults[T]:
     It is also possible to use ``return multiple()`` with no arguments in
     order to end a rule without passing any result.
     """
-    return MultipleResults(args)
+    pass
 
 
 def _convert_targets(targets, target):
@@ -864,7 +624,7 @@ def rule(
 
         @proxies(f)
         def rule_wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
+            pass
 
         setattr(rule_wrapper, RULE_MARKER, rule)
         return rule_wrapper
@@ -953,7 +713,7 @@ def initialize(
 
         @proxies(f)
         def rule_wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
+            pass
 
         setattr(rule_wrapper, INITIALIZE_RULE_MARKER, rule)
         return rule_wrapper
@@ -993,39 +753,7 @@ def precondition(precond: Callable[[Any], bool]) -> Callable[[TestFunc], TestFun
 
     def decorator(f):
         @proxies(f)
-        def precondition_wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
-
-        existing_initialize_rule = getattr(f, INITIALIZE_RULE_MARKER, None)
-        if existing_initialize_rule is not None:
-            raise InvalidDefinition(
-                f"{_rule_qualname(f)} has been decorated with both @initialize and "
-                "@precondition, which is not allowed. An initialization rule "
-                "runs unconditionally and may not have a precondition."
-            )
-
-        rule = getattr(f, RULE_MARKER, None)
-        invariant = getattr(f, INVARIANT_MARKER, None)
-        if rule is not None:
-            assert invariant is None
-            new_rule = dataclasses.replace(
-                rule, preconditions=(*rule.preconditions, precond)
-            )
-            setattr(precondition_wrapper, RULE_MARKER, new_rule)
-        elif invariant is not None:
-            assert rule is None
-            new_invariant = dataclasses.replace(
-                invariant, preconditions=(*invariant.preconditions, precond)
-            )
-            setattr(precondition_wrapper, INVARIANT_MARKER, new_invariant)
-        else:
-            setattr(
-                precondition_wrapper,
-                PRECONDITIONS_MARKER,
-                (*getattr(f, PRECONDITIONS_MARKER, ()), precond),
-            )
-
-        return precondition_wrapper
+        pass
 
     return decorator
 
@@ -1064,35 +792,7 @@ def invariant(*, check_during_init: bool = False) -> Callable[[TestFunc], TestFu
     Pass ``check_during_init=True`` for invariants which can also be checked
     during initialization.
     """
-    check_type(bool, check_during_init, "check_during_init")
-
-    def accept(f):
-        if getattr(f, RULE_MARKER, None) or getattr(f, INITIALIZE_RULE_MARKER, None):
-            raise InvalidDefinition(
-                f"{_rule_qualname(f)} has been decorated with both @invariant and "
-                "@rule, which is not allowed."
-            )
-        existing_invariant = getattr(f, INVARIANT_MARKER, None)
-        if existing_invariant is not None:
-            raise InvalidDefinition(
-                f"{_rule_qualname(f)} has been decorated with @invariant twice, "
-                "which is not allowed."
-            )
-        preconditions = getattr(f, PRECONDITIONS_MARKER, ())
-        invar = Invariant(
-            function=f,
-            preconditions=preconditions,
-            check_during_init=check_during_init,
-        )
-
-        @proxies(f)
-        def invariant_wrapper(*args, **kwargs):
-            return f(*args, **kwargs)
-
-        setattr(invariant_wrapper, INVARIANT_MARKER, invar)
-        return invariant_wrapper
-
-    return accept
+    pass
 
 
 class RuleStrategy(SearchStrategy):
@@ -1143,7 +843,7 @@ class RuleStrategy(SearchStrategy):
             # rules are invalid we would make a lot more choices if we ask if they
             # are enabled before we ask if they are valid, so our test cases would
             # be artificially large.
-            return self.is_valid(r) and feature_flags.is_enabled(r.function.__name__)
+            pass
 
         rule = data.draw(self.rules_strategy.filter(rule_is_enabled))
 

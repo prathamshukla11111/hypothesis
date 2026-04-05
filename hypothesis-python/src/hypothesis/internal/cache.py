@@ -77,19 +77,11 @@ class GenericCache(Generic[K, V]):
 
     @property
     def keys_to_indices(self) -> dict[K, int]:
-        try:
-            return self._threadlocal.keys_to_indices
-        except AttributeError:
-            self._threadlocal.keys_to_indices = {}
-            return self._threadlocal.keys_to_indices
+        pass
 
     @property
     def data(self) -> list[Entry[K, V]]:
-        try:
-            return self._threadlocal.data
-        except AttributeError:
-            self._threadlocal.data = []
-            return self._threadlocal.data
+        pass
 
     def __len__(self) -> int:
         assert len(self.keys_to_indices) == len(self.data)
@@ -165,8 +157,7 @@ class GenericCache(Generic[K, V]):
 
     def is_pinned(self, key: K) -> bool:
         """Returns True if the key is currently pinned."""
-        i = self.keys_to_indices[key]
-        return self.data[i].pins > 0
+        pass
 
     def clear(self) -> None:
         """Remove all keys, regardless of their pinned status."""
@@ -190,7 +181,7 @@ class GenericCache(Generic[K, V]):
 
         Returns the new score for the key.
         """
-        return score
+        pass
 
     def on_evict(self, key: K, value: V, score: Any) -> Any:
         """Called after a key has been evicted, with the score it had had at
@@ -202,22 +193,10 @@ class GenericCache(Generic[K, V]):
         Asserts that all of the cache's invariants hold. When everything
         is working correctly this should be an expensive no-op.
         """
-        assert len(self.keys_to_indices) == len(self.data)
-        for i, e in enumerate(self.data):
-            assert self.keys_to_indices[e.key] == i
-            for j in [i * 2 + 1, i * 2 + 2]:
-                if j < len(self.data):
-                    assert e.sort_key <= self.data[j].sort_key, self.data
+        pass
 
     def __entry_was_accessed(self, i: int) -> None:
-        entry = self.data[i]
-        new_score = self.on_access(entry.key, entry.value, entry.score)
-        if new_score != entry.score:
-            entry.score = new_score
-            # changing the score of a pinned entry cannot unbalance the heap, as
-            # we place all pinned entries after unpinned ones, regardless of score.
-            if entry.pins == 0:
-                self.__balance(i)
+        pass
 
     def __swap(self, i: int, j: int) -> None:
         assert i < j
@@ -278,14 +257,13 @@ class LRUReusedCache(GenericCache[K, V]):
         self.__tick: int = 0
 
     def tick(self) -> int:
-        self.__tick += 1
-        return self.__tick
+        pass
 
     def new_entry(self, key: K, value: V) -> Any:
-        return (1, self.tick())
+        pass
 
     def on_access(self, key: K, value: V, score: Any) -> Any:
-        return (2, self.tick())
+        pass
 
 
 class LRUCache(Generic[K, V]):
@@ -317,11 +295,7 @@ class LRUCache(Generic[K, V]):
 
     @property
     def cache(self) -> OrderedDict[K, V]:
-        try:
-            return self._threadlocal.cache
-        except AttributeError:
-            self._threadlocal.cache = OrderedDict()
-            return self._threadlocal.cache
+        pass
 
     def __setitem__(self, key: K, value: V) -> None:
         self.cache[key] = value

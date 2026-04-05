@@ -59,16 +59,14 @@ class TupleStrategy(SearchStrategy[tuple[Ex, ...]]):
             s.validate()
 
     def calc_label(self) -> int:
-        return combine_labels(
-            self.class_label, *(s.label for s in self.element_strategies)
-        )
+        pass
 
     def __repr__(self) -> str:
         tuple_string = ", ".join(map(repr, self.element_strategies))
         return f"TupleStrategy(({tuple_string}))"
 
     def calc_has_reusable_values(self, recur: RecurT) -> bool:
-        return all(recur(e) for e in self.element_strategies)
+        pass
 
     def do_draw(self, data: ConjectureData) -> tuple[Ex, ...]:
         context = current_build_context()
@@ -87,7 +85,7 @@ class TupleStrategy(SearchStrategy[tuple[Ex, ...]]):
         return result
 
     def calc_is_empty(self, recur: RecurT) -> bool:
-        return any(recur(e) for e in self.element_strategies)
+        pass
 
 
 @overload
@@ -189,7 +187,7 @@ class ListStrategy(SearchStrategy[list[Ex]]):
             )
 
     def calc_label(self) -> int:
-        return combine_labels(self.class_label, self.element_strategy.label)
+        pass
 
     def do_validate(self) -> None:
         self.element_strategy.validate()
@@ -206,9 +204,7 @@ class ListStrategy(SearchStrategy[list[Ex]]):
             )
 
     def calc_is_empty(self, recur: RecurT) -> bool:
-        if self.min_size == 0:
-            return False
-        return recur(self.element_strategy)
+        pass
 
     def do_draw(self, data: ConjectureData) -> list[Ex]:
         if self.element_strategy.is_empty:
@@ -233,38 +229,7 @@ class ListStrategy(SearchStrategy[list[Ex]]):
         )
 
     def filter(self, condition: Callable[[list[Ex]], Any]) -> SearchStrategy[list[Ex]]:
-        if condition in self._nonempty_filters or is_identity_function(condition):
-            assert self.max_size >= 1, "Always-empty is special cased in st.lists()"
-            if self.min_size >= 1:
-                return self
-            new = copy.copy(self)
-            new.min_size = 1
-            return new
-
-        constraints, pred = get_integer_predicate_bounds(condition)
-        if constraints.get("len") and (
-            "min_value" in constraints or "max_value" in constraints
-        ):
-            new = copy.copy(self)
-            new.min_size = max(
-                self.min_size, constraints.get("min_value", self.min_size)
-            )
-            new.max_size = min(
-                self.max_size, constraints.get("max_value", self.max_size)
-            )
-            # Unsatisfiable filters are easiest to understand without rewriting.
-            if new.min_size > new.max_size:
-                return SearchStrategy.filter(self, condition)
-            # Recompute average size; this is cheaper than making it into a property.
-            new.average_size = min(
-                max(new.min_size * 2, new.min_size + 5),
-                0.5 * (new.min_size + new.max_size),
-            )
-            if pred is None:
-                return new
-            return SearchStrategy.filter(new, condition)
-
-        return SearchStrategy.filter(self, condition)
+        pass
 
 
 class UniqueListStrategy(ListStrategy[Ex]):
@@ -304,10 +269,7 @@ class UniqueListStrategy(ListStrategy[Ex]):
         # approach because some strategies have special logic for generation under a
         # filter, and FilteredStrategy can consolidate multiple filters.
         def not_yet_in_unique_list(val: Ex) -> bool:  # type: ignore # covariant type param
-            return all(
-                key(val) not in seen
-                for key, seen in zip(self.keys, seen_sets, strict=True)
-            )
+            pass
 
         filtered = FilteredStrategy(
             self.element_strategy, conditions=(not_yet_in_unique_list,)
@@ -418,7 +380,7 @@ class FixedDictStrategy(SearchStrategy[dict[Any, Any]]):
         return value
 
     def calc_is_empty(self, recur: RecurT) -> bool:
-        return recur(self.fixed)
+        pass
 
     def __repr__(self) -> str:
         if self.optional is not None:

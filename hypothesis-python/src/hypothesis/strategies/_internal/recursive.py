@@ -40,19 +40,19 @@ class LimitedStrategy(SearchStrategy):
 
     @property
     def marker(self):
-        return getattr(self._threadlocal, "marker", 0)
+        pass
 
     @marker.setter
     def marker(self, value):
-        self._threadlocal.marker = value
+        pass
 
     @property
     def currently_capped(self):
-        return getattr(self._threadlocal, "currently_capped", False)
+        pass
 
     @currently_capped.setter
     def currently_capped(self, value):
-        self._threadlocal.currently_capped = value
+        pass
 
     def __repr__(self) -> str:
         return f"LimitedStrategy({self.base_strategy!r})"

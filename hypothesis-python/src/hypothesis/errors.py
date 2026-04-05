@@ -142,7 +142,7 @@ class FlakyFailure(ExceptionGroup, Flaky):
     # instead of ExceptionGroup. See https://github.com/python/cpython/issues/119287
     # and https://docs.python.org/3/library/exceptions.html#BaseExceptionGroup.derive
     def derive(self, excs):
-        return type(self)(self.message, excs)
+        pass
 
 
 class FlakyBackendFailure(FlakyFailure):

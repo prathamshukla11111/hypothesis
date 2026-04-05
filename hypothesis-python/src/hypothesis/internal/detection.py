@@ -36,6 +36,4 @@ def is_hypothesis_test(f: object) -> bool:
         See also the :doc:`Detect Hypothesis tests
         </how-to/detect-hypothesis-tests>` how-to.
     """
-    if isinstance(f, MethodType):
-        return is_hypothesis_test(f.__func__)
-    return getattr(f, "is_hypothesis_test", False)
+    pass
